@@ -1,0 +1,6 @@
+{
+  "name": "AUTOSAR HLD Analysis Assistant",
+  "description": "Production-grade RAG and document analysis assistant for automotive AUTOSAR High-Level Design specifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

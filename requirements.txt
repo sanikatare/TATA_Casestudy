@@ -1,0 +1,3 @@
+# AUTOSAR HLD Analysis Assistant - Unified Requirements
+-r backend/requirements.txt
+-r frontend/requirements.txt
