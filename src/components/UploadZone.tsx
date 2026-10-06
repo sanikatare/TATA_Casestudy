@@ -52,17 +52,17 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Upload Drag & Drop Box */}
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
+        className={`relative border-2 border-dashed rounded-3xl p-10 text-center transition-all cursor-pointer ${
           isDragging
-            ? 'border-blue-500 bg-blue-50/60'
-            : 'border-slate-300 hover:border-blue-400 bg-white shadow-xs'
+            ? 'border-blue-600 bg-blue-50/70'
+            : 'border-slate-300 hover:border-blue-500 bg-white shadow-xs hover:shadow-sm'
         }`}
       >
         <input
@@ -77,74 +77,79 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
           }}
         />
 
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 text-blue-400 flex items-center justify-center shadow-md">
             {isUploading ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="w-8 h-8 animate-spin" />
             ) : (
-              <Upload className="w-6 h-6" />
+              <Upload className="w-8 h-8" />
             )}
           </div>
 
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-              Upload AUTOSAR HLD
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              Ingest AUTOSAR High-Level Design Specification
             </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Drag and drop PDF here, or <span className="text-blue-600 font-semibold underline underline-offset-2">Browse Files</span>
+            <p className="text-xs text-slate-500">
+              Drag and drop PDF here, or <span className="text-blue-700 font-bold underline underline-offset-4">Browse Files</span>
             </p>
           </div>
 
-          <div className="text-[11px] text-slate-400 font-mono">
-            Supported: ECU Software Architecture, BSW Matrix, Interface Specs (PDF up to 50MB)
+          <div className="text-xs text-slate-400 max-w-md font-medium">
+            Supported: ECU Software Architecture, BSW Matrix, Interface Specs, ARXML Mappings (PDF up to 50MB)
           </div>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-          <span>{errorMsg}</span>
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+          <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
 
       {/* Post-Upload Summary Cards */}
       {recentUpload && (
-        <div className="p-4 rounded-xl bg-white border border-blue-200 shadow-xs space-y-3">
+        <div className="p-6 rounded-2xl bg-white border border-blue-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <FileText className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-bold text-slate-900 font-mono">{recentUpload.filename}</span>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 text-blue-700 rounded-lg">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-900">{recentUpload.filename}</span>
+                <div className="text-xs text-slate-500">{recentUpload.ecu_domain}</div>
+              </div>
             </div>
-            <StatusBadge status={recentUpload.processing_status} label="Indexed" />
+            <StatusBadge status={recentUpload.processing_status} label="Ingested & Chunks Indexed" />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100 text-xs font-mono">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-slate-100 text-xs">
             <div>
-              <span className="text-slate-400 text-[10px]">FILE SIZE</span>
-              <div className="text-slate-800 font-semibold mt-0.5">
+              <span className="text-slate-400 text-[10px] uppercase font-bold">FILE SIZE</span>
+              <div className="text-slate-800 font-bold mt-1">
                 {(recentUpload.file_size_bytes / (1024 * 1024)).toFixed(2)} MB
               </div>
             </div>
 
             <div>
-              <span className="text-slate-400 text-[10px]">TOTAL PAGES</span>
-              <div className="text-slate-800 font-semibold mt-0.5">
-                {recentUpload.page_count} Pages
+              <span className="text-slate-400 text-[10px] uppercase font-bold">PAGE COUNT</span>
+              <div className="text-slate-800 font-bold mt-1">
+                {recentUpload.page_count} Pages Extracted
               </div>
             </div>
 
             <div>
-              <span className="text-slate-400 text-[10px]">CHUNKS GENERATED</span>
-              <div className="text-blue-600 font-semibold mt-0.5">
-                {recentUpload.chunk_count} Chunks
+              <span className="text-slate-400 text-[10px] uppercase font-bold">SEMANTIC CHUNKS</span>
+              <div className="text-blue-700 font-bold mt-1">
+                {recentUpload.chunk_count} Vector Chunks
               </div>
             </div>
 
             <div>
-              <span className="text-slate-400 text-[10px]">INDEX STATUS</span>
-              <div className="text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Ready in ChromaDB
+              <span className="text-slate-400 text-[10px] uppercase font-bold">VECTOR STATUS</span>
+              <div className="text-emerald-700 font-bold mt-1 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Indexed in ChromaDB
               </div>
             </div>
           </div>

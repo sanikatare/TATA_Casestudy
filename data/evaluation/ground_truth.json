@@ -1,0 +1,102 @@
+[
+  {
+    "id": "TC-01",
+    "category": "Port & Bus Routing",
+    "question": "Which software components communicate with the Gateway ECU over CAN-FD channel 0?",
+    "expected_answer": "PowertrainCoordination_SWC and BodyControl_SWC communicate with Gateway_Router_SWC via CAN-FD channel 0.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 42,
+    "target_section": "4.2 CAN-FD Bus Matrix & SW-C Allocation",
+    "keywords": ["PowertrainCoordination_SWC", "BodyControl_SWC", "CAN-FD Channel 0", "Gateway_Router_SWC"]
+  },
+  {
+    "id": "TC-02",
+    "category": "Bus Matrix Specs",
+    "question": "What is the nominal bitrate and data payload bitrate configured for CAN-FD Channel 0?",
+    "expected_answer": "Nominal arbitration bitrate is 500 kbps and data payload bitrate is 2.0 Mbps with 64-byte payload size.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 38,
+    "target_section": "4.2 CAN-FD Bus Matrix & Routing Table",
+    "keywords": ["500 kbps", "2.0 Mbps", "64 bytes", "arbitration"]
+  },
+  {
+    "id": "TC-03",
+    "category": "ISO 26262 Safety",
+    "question": "What ASIL functional safety rating is assigned to regenerative torque arbitration?",
+    "expected_answer": "Regenerative torque arbitration is hosted in PowertrainCoordination_SWC and rated ASIL-D under ISO 26262.",
+    "target_document": "Powertrain_Coordination_SWC_Specification.pdf",
+    "target_page": 14,
+    "target_section": "2.4 Safety Goals & ASIL Decomposition",
+    "keywords": ["ASIL-D", "ISO 26262", "Safety Goal SG-01", "PowertrainCoordination_SWC"]
+  },
+  {
+    "id": "TC-04",
+    "category": "RTE Interfaces",
+    "question": "What is the communication pattern and data element structure of SR_TorqueRequest?",
+    "expected_answer": "SR_TorqueRequest is an unqueued Sender-Receiver interface containing TorqueDemand_Nm (uint16), TorqueGradient (int16), and TorqueStatus (enum).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 19,
+    "target_section": "3.1 Sender-Receiver Ports & Diagnostics",
+    "keywords": ["Sender-Receiver", "TorqueDemand_Nm", "non-queued", "RTE"]
+  },
+  {
+    "id": "TC-05",
+    "category": "BSW Diagnostics",
+    "question": "Which Basic Software (BSW) module handles bus-off events and diagnostic trouble codes (DTCs)?",
+    "expected_answer": "Diagnostic Event Manager (Dem) handles bus error states, event debouncing, and DTC storage.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 67,
+    "target_section": "5.1 Dem Module Architecture & DTC Debouncing",
+    "keywords": ["Dem", "Diagnostic Event Manager", "DTC", "BusOff"]
+  },
+  {
+    "id": "TC-06",
+    "category": "Task Scheduling",
+    "question": "What is the cyclic execution periodicity of PowertrainCoordination_SWC?",
+    "expected_answer": "PowertrainCoordination_SWC executes cyclically every 10ms bound to OS Task_10ms_Core0.",
+    "target_document": "Powertrain_Coordination_SWC_Specification.pdf",
+    "target_page": 31,
+    "target_section": "3.5 Component Memory & Task Partitioning",
+    "keywords": ["10ms", "cyclic", "OS Task_10ms_Core0"]
+  },
+  {
+    "id": "TC-07",
+    "category": "Client-Server Ports",
+    "question": "Which diagnostic client-server interface is implemented by Dem_BSW_Module?",
+    "expected_answer": "CS_DiagRoutine_Service exposing StartRoutine(), StopRoutine(), and RequestResults().",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 72,
+    "target_section": "5.3 UDS Diagnostic Services",
+    "keywords": ["CS_DiagRoutine_Service", "Client-Server", "StartRoutine", "StopRoutine"]
+  },
+  {
+    "id": "TC-08",
+    "category": "Signal PDU Routing",
+    "question": "Which AUTOSAR BSW module handles the translation and routing of I-PDUs between CanIf and RTE?",
+    "expected_answer": "PDU Router (PduR) routes I-PDUs between CAN Interface (CanIf) and RTE.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 24,
+    "target_section": "3.2 Software Component Allocation & Ports",
+    "keywords": ["PduR", "PDU Router", "CanIf", "I-PDU"]
+  },
+  {
+    "id": "TC-09",
+    "category": "Negative Constraint",
+    "question": "What is the FlexRay cycle repetition parameter for chassis domain suspension leveling?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (FlexRay parameters not present).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-10",
+    "category": "Fault Reaction Limit",
+    "question": "What is the Fault Reaction Time Limit (FRTL) for torque sensor plausibility failures?",
+    "expected_answer": "The Fault Reaction Time Limit (FRTL) is 20 milliseconds to transition the motor into passive safe-state.",
+    "target_document": "Powertrain_Coordination_SWC_Specification.pdf",
+    "target_page": 22,
+    "target_section": "2.7 Fault Detection and Safe State Invariants",
+    "keywords": ["20ms", "Fault Reaction Time Limit", "FRTL", "safe-state"]
+  }
+]

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, X, HardDrive } from 'lucide-react';
+import { FileText, X, HardDrive, Bot, Layers, Sliders } from 'lucide-react';
 import { UploadZone } from '../components/UploadZone';
 import { DocumentTable } from '../components/DocumentTable';
 import { StatusBadge } from '../components/StatusBadge';
+import { ChunkInspectorModal } from '../components/ChunkInspectorModal';
 import { getDocuments, uploadDocument, deleteDocument } from '../services/api';
 import { DocumentItem } from '../types/autosar';
 
@@ -12,6 +13,7 @@ export const DocumentsPage: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+  const [chunkModalDoc, setChunkModalDoc] = useState<DocumentItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -55,19 +57,19 @@ export const DocumentsPage: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/90">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-            Documents
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Document Repository & Ingestion Hub
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage AUTOSAR HLD engineering documents and monitor vector chunk extraction.
+          <p className="text-xs text-slate-500 mt-1 font-medium">
+            Manage AUTOSAR HLD engineering specifications and monitor semantic chunk extraction.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-2.5 text-xs text-slate-700 bg-white px-4 py-2 rounded-xl border border-slate-200/90 shadow-2xs font-bold">
           <HardDrive className="w-4 h-4 text-blue-600" />
-          <span>Local Storage: <code>./data/uploads</code></span>
+          <span>Vector Index: <span className="text-slate-900">./data/chroma</span></span>
         </div>
       </div>
 
@@ -78,14 +80,14 @@ export const DocumentsPage: React.FC = () => {
       />
 
       {/* Ingested Documents Inventory Table */}
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-              Ingested Document Repository ({documents.length})
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              Ingested Document Specifications ({documents.length})
             </h3>
-            <p className="text-xs text-slate-500">
-              Active specifications with page boundaries preserved for source citations.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Active engineering specifications with page boundaries preserved for verified citations.
             </p>
           </div>
         </div>
@@ -95,23 +97,24 @@ export const DocumentsPage: React.FC = () => {
           onViewDoc={handleView}
           onAnalyzeDoc={handleAnalyze}
           onDeleteDoc={handleDelete}
+          onInspectChunks={(doc) => setChunkModalDoc(doc)}
         />
       </div>
 
-      {/* Document Inspector Modal */}
+      {/* Document Details Modal */}
       {showDetailModal && selectedDoc && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200">
-                  <FileText className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-8 space-y-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 rounded-2xl bg-slate-900 text-blue-400">
+                  <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 truncate max-w-[280px]">
+                  <h3 className="font-bold text-base text-slate-900 truncate max-w-[280px]">
                     {selectedDoc.filename}
                   </h3>
-                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  <div className="text-xs text-slate-500 mt-0.5">
                     ID: {selectedDoc.id}
                   </div>
                 </div>
@@ -119,58 +122,81 @@ export const DocumentsPage: React.FC = () => {
 
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <div>
-                  <span className="text-slate-500 text-[10px]">VERSION</span>
-                  <div className="text-slate-900 font-bold">{selectedDoc.version}</div>
+                  <span className="text-slate-500 text-[10px] font-bold uppercase">VERSION</span>
+                  <div className="text-slate-900 font-extrabold text-sm mt-0.5">{selectedDoc.version}</div>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px]">STATUS</span>
-                  <div><StatusBadge status={selectedDoc.processing_status} /></div>
+                  <span className="text-slate-500 text-[10px] font-bold uppercase">STATUS</span>
+                  <div className="mt-0.5"><StatusBadge status={selectedDoc.processing_status} /></div>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px]">PAGES</span>
-                  <div className="text-slate-900 font-bold">{selectedDoc.page_count} Pages</div>
+                  <span className="text-slate-500 text-[10px] font-bold uppercase">PAGES EXTRACTED</span>
+                  <div className="text-slate-900 font-extrabold text-sm mt-0.5">{selectedDoc.page_count} Pages</div>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px]">SEMANTIC CHUNKS</span>
-                  <div className="text-blue-600 font-bold">{selectedDoc.chunk_count} Chunks</div>
+                  <span className="text-slate-500 text-[10px] font-bold uppercase">SEMANTIC CHUNKS</span>
+                  <div className="text-blue-700 font-extrabold text-sm mt-0.5">{selectedDoc.chunk_count} Chunks</div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
-                <span className="text-slate-500 text-[10px]">ARCHITECTURAL DOMAIN</span>
-                <div className="text-slate-800 font-sans">{selectedDoc.ecu_domain || 'Automotive Central Gateway'}</div>
-                <div className="text-slate-500 font-sans text-[11px]">Standard: {selectedDoc.standard || 'AUTOSAR Classic 4.4'}</div>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-slate-500 text-[10px] font-bold uppercase">ARCHITECTURAL DOMAIN</span>
+                <div className="text-slate-900 font-bold text-sm">{selectedDoc.ecu_domain || 'Automotive Central Gateway'}</div>
+                <div className="text-slate-600 text-xs">Standard: {selectedDoc.standard || 'AUTOSAR Classic 4.4'}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
-              >
-                Close
-              </button>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
               <button
                 onClick={() => {
+                  const target = selectedDoc;
                   setShowDetailModal(false);
-                  handleAnalyze(selectedDoc);
+                  setChunkModalDoc(target);
                 }}
-                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors cursor-pointer flex items-center gap-1.5"
+                className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>Launch in HLD Assistant</span>
+                <Layers className="w-4 h-4 text-blue-600" />
+                <span>Inspect Chunks & Debug</span>
               </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    handleAnalyze(selectedDoc);
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                >
+                  <Bot className="w-4 h-4 text-blue-400" />
+                  <span>Launch in Assistant</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chunk Inspector & RAG Debug Studio Modal */}
+      {chunkModalDoc && (
+        <ChunkInspectorModal
+          document={chunkModalDoc}
+          onClose={() => setChunkModalDoc(null)}
+        />
       )}
     </div>
   );

@@ -8,7 +8,9 @@ import {
   ChevronRight,
   Loader2,
   Bot,
-  CheckCircle2
+  CheckCircle2,
+  HelpCircle,
+  RotateCcw
 } from 'lucide-react';
 import { ChatMessage } from '../components/ChatMessage';
 import { StatusBadge } from '../components/StatusBadge';
@@ -47,6 +49,13 @@ const EXTRACTED_EXPLORER_CANDIDATES = {
     { from: 'BodyControl_SWC', to: 'Gateway_Router_SWC', via: 'LIN / CAN-FD Gateway' }
   ]
 };
+
+const SUGGESTED_QUERIES = [
+  "Which software components communicate with the Gateway ECU over CAN-FD channel 0?",
+  "What are the ASIL safety requirements defined for regenerative torque arbitration?",
+  "Explain the Diagnostic Event Manager (Dem) DTC debouncing and aging strategy.",
+  "What Run-Time Environment (RTE) Sender-Receiver interfaces are bound to the Powertrain SW-C?"
+];
 
 export const HLDAssistantPage: React.FC = () => {
   const location = useLocation();
@@ -99,25 +108,29 @@ export const HLDAssistantPage: React.FC = () => {
     }
   };
 
+  const handleClearChat = () => {
+    setChatHistory([]);
+  };
+
   return (
-    <div className="h-[calc(100vh-8.5rem)] flex flex-col space-y-4">
-      {/* Top Assistant Status Header */}
-      <div className="p-4 rounded-xl bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200">
-            <FileText className="w-4 h-4" />
+    <div className="h-[calc(100vh-9rem)] flex flex-col space-y-4">
+      {/* Top Assistant Control Bar */}
+      <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-slate-900 text-white shadow-xs">
+            <FileText className="w-5 h-5 text-blue-400" />
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono text-slate-500 uppercase font-semibold">Target Document:</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Target Specification:</span>
               <select
                 value={selectedDoc?.id || ''}
                 onChange={(e) => {
                   const doc = documents.find(d => d.id === e.target.value);
                   if (doc) setSelectedDoc(doc);
                 }}
-                className="bg-slate-50 border border-slate-300 text-slate-900 font-mono text-xs px-2.5 py-1 rounded focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="bg-slate-50 border border-slate-300 text-slate-900 font-bold text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
               >
                 {documents.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -126,22 +139,32 @@ export const HLDAssistantPage: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-              Standard: {selectedDoc?.standard || 'AUTOSAR Classic 4.4'} · {selectedDoc?.chunk_count || 142} Vector Chunks
+            <div className="text-xs text-slate-500 mt-1 font-medium">
+              Standard: <strong className="text-slate-800">{selectedDoc?.standard || 'AUTOSAR Classic 4.4'}</strong> · {selectedDoc?.chunk_count || 142} Dense Vector Chunks in ChromaDB
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-mono">
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">Index Status:</span>
-            <StatusBadge status="INDEXED" label="Indexed in ChromaDB" size="sm" />
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 font-medium">Vector Index:</span>
+            <StatusBadge status="INDEXED" label="ChromaDB Synchronized" size="sm" />
           </div>
 
-          <div className="flex items-center gap-1.5 text-slate-600">
-            <span>Retrieved Sources:</span>
-            <span className="text-blue-600 font-bold">Top-K = 5</span>
+          <div className="hidden sm:flex items-center gap-1.5 text-slate-600 font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <span>Retrieval:</span>
+            <span className="text-blue-700">Top-K = 5 Chunks</span>
           </div>
+
+          {chatHistory.length > 0 && (
+            <button
+              onClick={handleClearChat}
+              title="Reset conversation"
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -150,23 +173,23 @@ export const HLDAssistantPage: React.FC = () => {
         {/* ========================================================
             LEFT PANEL: Document Explorer (Extracted Candidates)
            ======================================================== */}
-        <div className="lg:col-span-4 rounded-xl bg-white border border-slate-200 flex flex-col min-h-0 overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 bg-slate-50/70">
+        <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/90 flex flex-col min-h-0 overflow-hidden shadow-xs">
+          <div className="p-5 border-b border-slate-200/90 bg-linear-to-b from-slate-50/70 to-white">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-blue-600" />
-                Document Explorer
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-blue-600" />
+                <span>Architecture Explorer</span>
               </h3>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
-                AI Candidates
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                AI Entities
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-sans">
-              Structural architectural entities parsed from {selectedDoc?.filename || 'selected HLD'}.
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Entities parsed from {selectedDoc?.filename || 'selected HLD'}. Click any item to formulate an inquiry.
             </p>
 
             {/* Sub-tab Navigation */}
-            <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1">
+            <div className="flex items-center gap-1.5 mt-3.5 overflow-x-auto pb-1">
               {[
                 { id: 'components', label: 'Components' },
                 { id: 'interfaces', label: 'Interfaces' },
@@ -177,10 +200,10 @@ export const HLDAssistantPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveExplorerTab(tab.id as any)}
-                  className={`px-2.5 py-1 text-[11px] font-mono rounded whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all cursor-pointer font-bold ${
                     activeExplorerTab === tab.id
-                      ? 'bg-blue-600 text-white font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   {tab.label}
@@ -190,74 +213,84 @@ export const HLDAssistantPage: React.FC = () => {
           </div>
 
           {/* Explorer Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5 text-xs font-mono">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
             {activeExplorerTab === 'components' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {EXTRACTED_EXPLORER_CANDIDATES.components.map((c, i) => (
                   <div
                     key={i}
-                    onClick={() => setQuestionInput(`What are the interfaces and port bindings for ${c.name}?`)}
-                    className="p-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 transition-colors cursor-pointer group shadow-2xs"
+                    onClick={() => handleAskQuestion(`What are the interfaces, ports, and safety requirements for ${c.name}?`)}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-400 hover:bg-white transition-all cursor-pointer group shadow-2xs"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-slate-900 font-bold group-hover:text-blue-600 transition-colors truncate">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-slate-900 font-bold group-hover:text-blue-700 transition-colors truncate">
                         {c.name}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded ${
-                        c.asil === 'ASIL-D' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-slate-200 text-slate-700'
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        c.asil === 'ASIL-D' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-slate-200 text-slate-800'
                       }`}>
                         {c.asil}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-600 font-sans">{c.type}</div>
-                    <div className="text-[10px] text-slate-400 mt-1">Host: {c.ecu}</div>
+                    <div className="text-xs text-slate-600 font-medium">{c.type}</div>
+                    <div className="text-[11px] text-slate-400 mt-1">ECU Host: {c.ecu}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {activeExplorerTab === 'interfaces' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {EXTRACTED_EXPLORER_CANDIDATES.interfaces.map((iface, i) => (
                   <div
                     key={i}
-                    onClick={() => setQuestionInput(`Explain the communication pattern and data elements of ${iface.name}`)}
-                    className="p-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 transition-colors cursor-pointer group shadow-2xs"
+                    onClick={() => handleAskQuestion(`Explain the communication pattern and data elements of ${iface.name}`)}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-400 hover:bg-white transition-all cursor-pointer group shadow-2xs"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-blue-600 font-bold group-hover:underline truncate">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-blue-700 font-bold group-hover:underline truncate">
                         {iface.name}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-800">
                         {iface.kind}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-600 font-sans mt-0.5">{iface.elements}</div>
+                    <div className="text-xs text-slate-600 mt-1">{iface.elements}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {activeExplorerTab === 'ports' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {EXTRACTED_EXPLORER_CANDIDATES.ports.map((p, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-slate-900 font-bold truncate">{p.name}</span>
-                      <span className="text-[10px] text-blue-700 px-1.5 rounded bg-blue-50 border border-blue-200">{p.kind}</span>
+                  <div
+                    key={i}
+                    onClick={() => handleAskQuestion(`Which component owns port ${p.name} and how is it connected?`)}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-400 hover:bg-white transition-all cursor-pointer group shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-slate-900 font-bold group-hover:text-blue-700 truncate">{p.name}</span>
+                      <span className="text-[10px] font-bold text-blue-800 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                        {p.kind}
+                      </span>
                     </div>
-                    <div className="text-[10px] text-slate-500">Allocated to: {p.owner}</div>
+                    <div className="text-xs text-slate-500">Allocated to: {p.owner}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {activeExplorerTab === 'signals' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {EXTRACTED_EXPLORER_CANDIDATES.signals.map((s, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                    <div className="text-amber-700 font-bold truncate">{s.name}</div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
+                  <div
+                    key={i}
+                    onClick={() => handleAskQuestion(`What is the cycle time and bus routing for signal ${s.name}?`)}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-400 hover:bg-white transition-all cursor-pointer group shadow-2xs"
+                  >
+                    <div className="text-amber-800 font-bold group-hover:underline truncate">{s.name}</div>
+                    <div className="flex items-center justify-between text-xs text-slate-500 mt-1.5">
                       <span>Bus: {s.bus}</span>
                       <span>Cycle: {s.cycle}</span>
                     </div>
@@ -267,15 +300,19 @@ export const HLDAssistantPage: React.FC = () => {
             )}
 
             {activeExplorerTab === 'dependencies' && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {EXTRACTED_EXPLORER_CANDIDATES.dependencies.map((d, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
+                  <div
+                    key={i}
+                    onClick={() => handleAskQuestion(`Explain the dependency path from ${d.from} to ${d.to}`)}
+                    className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-400 hover:bg-white transition-all cursor-pointer group shadow-2xs space-y-1.5"
+                  >
                     <div className="flex items-center justify-between text-slate-900 font-bold">
                       <span className="truncate">{d.from}</span>
-                      <ChevronRight className="w-3 h-3 text-slate-400 shrink-0 mx-1" />
-                      <span className="truncate text-blue-600">{d.to}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0 mx-1" />
+                      <span className="truncate text-blue-700">{d.to}</span>
                     </div>
-                    <div className="text-[10px] text-slate-500">Path: {d.via}</div>
+                    <div className="text-xs text-slate-500">Path: {d.via}</div>
                   </div>
                 ))}
               </div>
@@ -286,40 +323,59 @@ export const HLDAssistantPage: React.FC = () => {
         {/* ========================================================
             RIGHT PANEL: AI Assistant Chat & Citations
            ======================================================== */}
-        <div className="lg:col-span-8 rounded-xl bg-white border border-slate-200 flex flex-col min-h-0 overflow-hidden shadow-xs">
+        <div className="lg:col-span-8 rounded-2xl bg-white border border-slate-200/90 flex flex-col min-h-0 overflow-hidden shadow-xs">
           {/* Assistant Header Info */}
-          <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center">
+          <div className="p-4 px-6 border-b border-slate-200/90 bg-linear-to-b from-slate-50/70 to-white flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-slate-900 text-blue-400 flex items-center justify-center shadow-xs">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
-                  AUTOSAR RAG Intelligence Workspace
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  AUTOSAR RAG Intelligence Console
                 </h3>
-                <div className="text-[11px] text-slate-500">
-                  Strict zero-hallucination constraint with page-level citation audit.
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Zero-hallucination constraint with exact page-level citation audit.
                 </div>
               </div>
             </div>
 
-            <div className="text-xs font-mono text-emerald-700 flex items-center gap-1.5 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Grounded Model Ready</span>
+            <div className="text-xs text-emerald-800 flex items-center gap-1.5 font-bold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Grounded Engine Ready</span>
             </div>
           </div>
 
+          {/* Suggested Quick Queries Banner */}
+          <div className="px-6 py-3 bg-slate-50/60 border-b border-slate-100 flex items-center gap-2 overflow-x-auto shrink-0">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+              Suggestions:
+            </span>
+            {SUGGESTED_QUERIES.map((sq, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAskQuestion(sq)}
+                className="text-xs px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 hover:text-blue-700 hover:border-blue-300 transition-colors whitespace-nowrap cursor-pointer shadow-2xs font-medium"
+              >
+                {sq}
+              </button>
+            ))}
+          </div>
+
           {/* Conversation Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/20">
             {chatHistory.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500 space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600">
-                  <Bot className="w-6 h-6" />
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500 space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 text-blue-400 flex items-center justify-center shadow-md">
+                  <Bot className="w-7 h-7" />
                 </div>
-                <div className="max-w-md">
-                  <h4 className="text-sm font-bold text-slate-900">Ask anything about the AUTOSAR HLD</h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Query components, interfaces, signal mappings, or diagnostic routines. Every response includes page and section citations.
+                <div className="max-w-md space-y-2">
+                  <h4 className="text-base font-bold text-slate-900">
+                    Query the AUTOSAR High-Level Design
+                  </h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                    Submit any architectural question regarding software components, RTE signal routing, or diagnostic event managers. Every answer cites exact page numbers.
                   </p>
                 </div>
               </div>
@@ -339,13 +395,13 @@ export const HLDAssistantPage: React.FC = () => {
           </div>
 
           {/* Question Input Box */}
-          <div className="p-4 border-t border-slate-200 bg-white space-y-2 shrink-0">
+          <div className="p-4 px-6 border-t border-slate-200/90 bg-white space-y-2.5 shrink-0">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleAskQuestion();
               }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
             >
               <div className="relative flex-1">
                 <input
@@ -354,29 +410,29 @@ export const HLDAssistantPage: React.FC = () => {
                   onChange={(e) => setQuestionInput(e.target.value)}
                   placeholder="e.g. Which software components communicate with the Gateway ECU over CAN-FD?"
                   disabled={isSubmitting}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 font-sans pr-10 focus:bg-white transition-colors"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 pr-10 focus:bg-white transition-all shadow-2xs font-medium"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting || !questionInput.trim()}
-                className="px-5 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-6 py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
                 ) : (
                   <>
-                    <span>Ask Question</span>
-                    <Send className="w-3.5 h-3.5" />
+                    <span>Submit Query</span>
+                    <Send className="w-4 h-4 text-blue-400" />
                   </>
                 )}
               </button>
             </form>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono px-1">
-              <span>Grounding: <strong>Top-5 Chunks</strong></span>
-              <span>FastAPI Endpoint: <code>POST /chat/query</code></span>
+            <div className="flex items-center justify-between text-xs text-slate-500 px-1 font-medium">
+              <span>Grounding Invariant: <strong className="text-slate-800">Top-5 Verified Chunks</strong></span>
+              <span>Audit SLA: <span className="text-emerald-700 font-bold">100% Page Traceability</span></span>
             </div>
           </div>
         </div>

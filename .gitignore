@@ -1,12 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -20,35 +16,35 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Virtual environments
-.env
-.venv
+# Virtual Environments
+.venv/
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
-# IDE & editors
-.vscode/
-.idea/
-*.swp
-*.swo
+# Environment Variables & Keys
+.env
+.env.local
 
-# Project dynamic data
-data/uploads/*
-!data/uploads/.gitkeep
-data/chroma/*
-!data/chroma/.gitkeep
-data/sqlite/*.db
-data/sqlite/*.db-journal
-!data/sqlite/.gitkeep
+# Local Databases & Vector Stores
+*.db
+*.sqlite3
+data/autosar_assistant.db
+vector_store/chroma/
+data/documents/*.pdf
 
-# Node.js / UI preview artifacts
+# Node & Frontend (if applicable)
 node_modules/
-.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+htmlcov/

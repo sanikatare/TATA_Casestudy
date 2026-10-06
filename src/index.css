@@ -4,11 +4,44 @@
   --font-sans: 'Playfair Display', Georgia, serif;
   --font-display: 'Playfair Display', Georgia, serif;
   --font-serif: 'Playfair Display', Georgia, serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-mono: 'Playfair Display', Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  font-family: 'Playfair Display', Georgia, serif !important;
 }
 
 html, body {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Playfair Display', Georgia, serif !important;
   background-color: #F8FAFC;
   color: #0F172A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom refined scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Elegant focus rings */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 1px;
 }

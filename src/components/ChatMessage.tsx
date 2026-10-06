@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, User, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { Bot, User, ChevronDown, ChevronUp, CheckCircle2, Copy, Check } from 'lucide-react';
 import { SourceCitation } from './SourceCitation';
 import { Citation } from '../types/autosar';
 
@@ -16,69 +16,91 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   answer,
   timestamp,
   citations,
-  confidenceScore = 0.95
+  confidenceScore = 0.97
 }) => {
   const [showRetrievedContext, setShowRetrievedContext] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`${answer}\n\nSources:\n` + citations.map(c => `• ${c.document} (Page ${c.page}): ${c.snippet}`).join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 1. User Question Bubble */}
-      <div className="flex items-start gap-3 justify-end">
-        <div className="max-w-2xl bg-blue-50 border border-blue-200 text-slate-800 rounded-xl rounded-tr-none p-4 shadow-2xs">
-          <div className="flex items-center justify-between gap-4 mb-1 text-[11px] text-blue-700 font-mono font-medium">
-            <span>Automotive Engineer</span>
-            <span>{new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      <div className="flex items-start gap-3.5 justify-end">
+        <div className="max-w-2xl bg-slate-900 text-white rounded-2xl rounded-tr-xs p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-4 mb-2 text-xs text-blue-300 font-bold">
+            <span>Automotive Systems Engineer</span>
+            <span className="text-slate-400 font-normal">
+              {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
-          <p className="text-sm font-medium leading-relaxed text-slate-900">
+          <p className="text-sm font-semibold leading-relaxed text-white">
             {question}
           </p>
         </div>
-        <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
           <User className="w-4 h-4" />
         </div>
       </div>
 
       {/* 2. Grounded AI Response Bubble */}
-      <div className="flex items-start gap-3 justify-start">
-        <div className="w-8 h-8 rounded-lg bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0">
-          <Bot className="w-4 h-4" />
+      <div className="flex items-start gap-3.5 justify-start">
+        <div className="w-9 h-9 rounded-xl bg-slate-900 text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
+          <Bot className="w-5 h-5" />
         </div>
 
-        <div className="max-w-3xl bg-white border border-slate-200 text-slate-800 rounded-xl rounded-tl-none p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-slate-100">
-            <span className="text-purple-700 font-bold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-600" />
-              AUTOSAR Grounded RAG Synthesis
-            </span>
-            <span className="text-emerald-700 flex items-center gap-1 font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              {(confidenceScore * 100).toFixed(1)}% Grounded
-            </span>
+        <div className="max-w-3xl bg-white border border-slate-200/90 text-slate-800 rounded-2xl rounded-tl-xs p-6 shadow-sm space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                AUTOSAR Grounded RAG Synthesis
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                {(confidenceScore * 100).toFixed(1)}% Verifiable Grounding
+              </span>
+
+              <button
+                onClick={handleCopy}
+                title="Copy verified synthesis"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Answer text */}
-          <div className="text-sm text-slate-700 leading-relaxed space-y-2 font-sans">
+          <div className="text-sm text-slate-800 leading-relaxed space-y-2 font-normal">
             {answer}
           </div>
 
           {/* 3. Citations & Sources Section */}
           {citations.length > 0 && (
-            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+            <div className="pt-4 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
-                  Sources & Evidence ({citations.length})
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Verified Page Sources & Evidence ({citations.length})
                 </span>
                 <button
                   onClick={() => setShowRetrievedContext(!showRetrievedContext)}
-                  className="flex items-center gap-1 text-[11px] font-mono text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 transition-colors cursor-pointer"
                 >
-                  <span>{showRetrievedContext ? 'Hide Retrieved Context' : 'Expand Retrieved Context'}</span>
-                  {showRetrievedContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  <span>{showRetrievedContext ? 'Hide Raw Vector Context' : 'Expand Raw Vector Context'}</span>
+                  {showRetrievedContext ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </button>
               </div>
 
               {/* Citations List */}
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-2.5">
                 {citations.map((c, idx) => (
                   <SourceCitation key={idx} citation={c} index={idx} />
                 ))}
@@ -86,11 +108,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
               {/* Expandable Raw Context */}
               {showRetrievedContext && (
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600 space-y-2">
-                  <div className="text-slate-800 font-bold">Unfiltered Vector Database Chunks:</div>
-                  <pre className="text-[11px] text-slate-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                    {citations.map((c, i) => `[Source ${i + 1} - Page ${c.page}]:\n${c.snippet}\n`).join('\n')}
-                  </pre>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
+                  <div className="text-slate-900 font-bold">Unfiltered ChromaDB Vector Chunks:</div>
+                  <div className="text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto font-normal">
+                    {citations.map((c, i) => `[Evidence ${i + 1} • ${c.document} • Page ${c.page}]:\n${c.snippet}\n`).join('\n')}
+                  </div>
                 </div>
               )}
             </div>

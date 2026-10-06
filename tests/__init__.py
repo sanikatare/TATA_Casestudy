@@ -1,1 +1,1 @@
-"""Unit and integration test suite for AUTOSAR HLD Analysis Assistant."""
+"""Test suite for AUTOSAR HLD Analysis Assistant."""

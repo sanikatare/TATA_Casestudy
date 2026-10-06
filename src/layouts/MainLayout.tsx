@@ -10,38 +10,38 @@ export const MainLayout: React.FC = () => {
     switch (pathname) {
       case '/':
         return {
-          title: 'Dashboard',
-          description: 'Automotive ECU High-Level Design Intelligence & Monitoring'
+          title: 'Executive Dashboard',
+          description: 'Automotive ECU High-Level Design Intelligence & Operational Telemetry'
         };
       case '/documents':
         return {
-          title: 'Documents',
-          description: 'Manage AUTOSAR HLD specifications, PDF parsing & vector chunks'
+          title: 'Document Repository',
+          description: 'Manage AUTOSAR HLD specifications, PDF parsing & ChromaDB vector chunks'
         };
       case '/assistant':
         return {
-          title: 'HLD Assistant',
-          description: 'Interactive architectural RAG workspace with verifiable citations'
+          title: 'HLD RAG Assistant',
+          description: 'Interactive architectural RAG workspace with verifiable page citations'
         };
       case '/analysis':
         return {
-          title: 'Analysis',
+          title: 'Architecture Analysis',
           description: 'Candidate software components, interfaces, ports, and signal flows'
         };
       case '/history':
         return {
-          title: 'Query History',
-          description: 'Comprehensive query audit trail with page-level citations'
+          title: 'Query History & Audit',
+          description: 'Comprehensive query audit trail with page-level citation verification'
         };
       case '/status':
         return {
-          title: 'System Status',
-          description: 'Operational health of FastAPI, PyMuPDF, ChromaDB, and SQLite'
+          title: 'System Diagnostics',
+          description: 'Operational health of REST API, PyMuPDF engine, ChromaDB, and SQLite'
         };
       case '/settings':
         return {
-          title: 'Settings',
-          description: 'Model configurations, embedding hyperparameters, and API paths'
+          title: 'Configuration',
+          description: 'Model configurations, embedding hyperparameters, and retrieval depth'
         };
       default:
         return {
@@ -54,20 +54,20 @@ export const MainLayout: React.FC = () => {
   const meta = getPageMeta(location.pathname);
 
   return (
-    <div className="flex h-screen w-screen bg-slate-50 text-slate-900 font-sans overflow-hidden antialiased">
+    <div className="flex h-screen w-screen bg-[#F8FAFC] text-slate-900 overflow-hidden antialiased select-auto">
       {/* Persistent Left Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-50">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#F8FAFC]">
         {/* Top Header */}
         <TopHeader
           title={meta.title}
           description={meta.description}
         />
 
-        {/* Scrollable Page Body */}
-        <main className="flex-1 overflow-y-auto p-8 bg-slate-50/80">
+        {/* Scrollable Page Body with Generous Padding */}
+        <main className="flex-1 overflow-y-auto p-8 lg:p-10 bg-[#F8FAFC]">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>
