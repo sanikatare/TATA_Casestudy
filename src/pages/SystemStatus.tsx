@@ -14,6 +14,7 @@ export const SystemStatusPage: React.FC = () => {
     uptime: "99.98%"
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     setIsRefreshing(true);
@@ -21,8 +22,10 @@ export const SystemStatusPage: React.FC = () => {
       const res = await getSystemStatus();
       setComponents(res.components);
       setStats(res.stats);
+      setErrorMsg(null);
     } catch (e) {
       console.error('System status query failed', e);
+      setErrorMsg(e instanceof Error ? e.message : 'Unable to load system status.');
     } finally {
       setIsRefreshing(false);
     }
@@ -54,6 +57,12 @@ export const SystemStatusPage: React.FC = () => {
           <span>Refresh</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
+          {errorMsg}
+        </div>
+      )}
 
       {/* KPI Cards - Blue & White */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

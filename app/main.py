@@ -32,6 +32,7 @@ from app.services.comparison import comparison_service, DocumentComparisonReques
 from app.services.consistency import consistency_engine
 from app.services.review import review_service
 from app.services.export import export_service
+from app.services.embeddings import embedding_service, EmbeddingModelUnavailableError
 
 
 @asynccontextmanager
@@ -108,6 +109,14 @@ async def corrupted_pdf_handler(request: Request, exc: CorruptedPDFError):
     )
 
 
+@app.exception_handler(EmbeddingModelUnavailableError)
+async def embedding_model_unavailable_handler(request: Request, exc: EmbeddingModelUnavailableError):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"error": "EmbeddingModelUnavailableError", "message": str(exc)}
+    )
+
+
 @app.get("/")
 def get_root():
     """Root entrypoint providing service health and documentation links."""
@@ -124,11 +133,14 @@ def get_root():
 @app.get("/health")
 def get_health():
     """System health check and diagnostic connectivity."""
+    health_status = "healthy" if embedding_service.is_real_model else "degraded"
     return {
-        "status": "healthy",
+        "status": health_status,
         "database": "SQLite Connected",
         "vector_store": "ChromaDB Ready",
         "embedding_model": settings.EMBEDDING_MODEL_NAME,
+        "embedding_model_loaded": embedding_service.is_real_model,
+        "embedding_model_error": embedding_service.load_error,
         "llm_provider": settings.LLM_PROVIDER
     }
 

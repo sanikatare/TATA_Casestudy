@@ -46,6 +46,7 @@ export const Dashboard: React.FC = () => {
   const [queries, setQueries] = useState<QueryRecord[]>([]);
   const [pipeline, setPipeline] = useState<PipelineComponentStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -58,8 +59,10 @@ export const Dashboard: React.FC = () => {
         setDocuments(docs);
         setQueries(hist);
         setPipeline(sys.components);
+        setErrorMsg(null);
       } catch (e) {
         console.error('Failed to load dashboard data', e);
+        setErrorMsg(e instanceof Error ? e.message : 'Unable to load dashboard data from backend.');
       } finally {
         setLoading(false);
       }
@@ -72,6 +75,12 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Hero Banner - Exceptional Blue & White Theme */}
+      {errorMsg && (
+        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
+          {errorMsg}
+        </div>
+      )}
+
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 text-white border border-blue-900 shadow-sm">
         <div className="absolute inset-0">
           <img

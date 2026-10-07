@@ -22,7 +22,7 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 3. **High-Precision Embeddings & Vector Search**: Use domain-proven models (BGE / E5) with ChromaDB for dense retrieval.
 4. **Strictly Grounded RAG Pipeline**: Synthesize answers solely from retrieved evidence, explicitly denying unsubstantiated claims.
 5. **Direct Source Traceability**: Provide explicit citations (Document, Page Number, Section, Relevant Chunk) for every generated answer.
-6. **Dual Execution Support**: Support local native execution and containerized execution via Docker Compose.
+6. **Local Execution Support**: Support local native execution for backend and frontend services.
 7. **Explainable Architecture**: Built cleanly for individual academic defense and viva presentations.
 
 ---
@@ -30,8 +30,8 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 ## 4. System Architecture
 ```
                          +-----------------------------+
-                         |  Streamlit Engineering UI   |
-                         |     (Port 8501 / Preview)   |
+                         | React + Vite Frontend UI    |
+                         |        (Port 3000)          |
                          +--------------+--------------+
                                         | HTTP / JSON
                                         v
@@ -65,13 +65,13 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 
 ## 5. Technology Stack
 - **Backend**: Python 3.10+, FastAPI, Uvicorn, Pydantic v2
-- **Frontend**: Streamlit (multi-page automotive engineering dashboard)
+- **Frontend**: React 19 + Vite + TypeScript
 - **Database**: SQLite (structured metadata, query logs, citation trails)
 - **Vector Storage**: ChromaDB (persistent local vector store)
-- **Embeddings**: BAAI/bge-small-en-v1.5 / intfloat/e5-small-v2
-- **Document Parser**: PyMuPDF (`fitz`) / pdfplumber
+- **Embeddings**: BAAI/bge-small-en-v1.5 (SentenceTransformers)
+- **Document Parser**: PyMuPDF (`fitz`)
 - **Testing**: pytest, pytest-asyncio, HTTPX
-- **Orchestration**: Docker, Docker Compose
+- **Orchestration**: Local FastAPI + Vite development servers
 
 ---
 
@@ -79,38 +79,20 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 ```
 project-root/
 │
-├── backend/
-│   ├── app/
-│   │   ├── main.py                 # FastAPI application entrypoint & middleware
-│   │   ├── config.py               # Pydantic environment configuration
-│   │   ├── api/
-│   │   │   ├── health.py           # Health and diagnostic endpoints
-│   │   │   ├── documents.py        # PDF upload and document management
-│   │   │   └── chat.py             # Query execution & audit history
-│   │   ├── models/
-│   │   │   ├── document.py         # Document Pydantic schemas
-│   │   │   ├── query.py            # User query schemas
-│   │   │   └── response.py         # Grounded answers and citation schemas
-│   │   ├── services/               # RAG, Ingestion, Vector DB services
-│   │   ├── database/
-│   │   │   ├── database.py         # SQLite connection manager and DDL initialization
-│   │   │   └── repositories.py     # Clean repository access layer
-│   │   └── utils/
-│   │       ├── logging.py          # Unified structured logging
-│   │       ├── chunking.py         # Semantic chunking logic
-│   │       └── pdf_parser.py       # Page-preserving PDF reader
-│   ├── requirements.txt            # Backend dependencies
-│   └── Dockerfile                  # Backend container build
+├── app/                            # FastAPI backend (routes, RAG, ingestion, services)
+│   ├── main.py
+│   ├── config.py
+│   ├── ingestion/
+│   ├── rag/
+│   ├── services/
+│   ├── models/
+│   └── utils/
 │
-├── frontend/
-│   ├── app.py                      # Streamlit application entrypoint & nav
+├── src/                            # React + Vite frontend
 │   ├── pages/
-│   │   ├── 1_Dashboard.py          # System status & storage metrics
-│   │   ├── 2_Documents.py          # PDF upload and document repository
-│   │   ├── 3_HLD_Assistant.py      # Core RAG query and citation console
-│   │   └── 4_Query_History.py      # Historical queries and citations audit
-│   ├── requirements.txt            # Frontend dependencies
-│   └── Dockerfile                  # Frontend container build
+│   ├── components/
+│   ├── services/api.ts
+│   └── types/
 │
 ├── data/
 │   ├── uploads/                    # Stored PDF documents
@@ -120,7 +102,7 @@ project-root/
 ├── tests/
 │   └── test_health.py              # Health check and schema validation tests
 │
-├── docker-compose.yml              # Multi-container orchestration
+├── package.json                    # Frontend dependencies and scripts
 ├── .env.example                    # Template environment variables
 ├── .gitignore                      # Git exclusion rules
 ├── requirements.txt                # Unified requirements file
@@ -134,7 +116,7 @@ project-root/
 ### Prerequisites
 - Python 3.10 or 3.11
 - pip / virtualenv
-- Docker & Docker Compose (optional for containerized runs)
+- Node.js 20+ and npm
 
 ### 1. Create Virtual Environment
 ```bash
@@ -144,8 +126,8 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 ### 2. Install Dependencies
 ```bash
-pip install -r backend/requirements.txt
-pip install -r frontend/requirements.txt
+pip install -r requirements.txt
+npm install
 ```
 
 ### 3. Environment Configuration
@@ -160,7 +142,7 @@ cp .env.example .env
 
 ### Start Backend (Terminal 1)
 ```bash
-uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 API Documentation will be available at:
 - Swagger UI: `http://localhost:8000/docs`
@@ -168,26 +150,16 @@ API Documentation will be available at:
 
 ### Start Frontend (Terminal 2)
 ```bash
-streamlit run frontend/app.py --server.port 8501
+npm run dev
 ```
-Open your browser at `http://localhost:8501`.
+Open your browser at `http://localhost:3000`.
 
 ---
 
-## 9. Running with Docker Compose
-Build and run the entire stack with a single command:
+## 9. Frontend Backend URL
+Set `VITE_BACKEND_URL` in `.env` if your API is not running at the default endpoint.
 ```bash
-# Build containers
-docker compose build
-
-# Start services in detached mode
-docker compose up -d
-
-# View service logs
-docker compose logs -f
-
-# Stop services
-docker compose down
+VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ---
@@ -197,16 +169,15 @@ docker compose down
 | Method | Endpoint | Description | Phase |
 |---|---|---|---|
 | `GET` | `/health` | Core health check returning `{"status": "healthy"}` | Phase 1 |
-| `GET` | `/health/details` | Detailed diagnostic information | Phase 1 |
 | `GET` | `/` | API status and root links | Phase 1 |
 | `GET` | `/documents` | List all ingested AUTOSAR documents | Phase 1 & 2 |
 | `POST`| `/documents/upload`| Upload, validate & extract AUTOSAR HLD PDF with PyMuPDF | Phase 2 |
-| `POST`| `/documents/sample`| Generate & ingest 4-page sample AUTOSAR HLD spec | Phase 2 |
-| `GET` | `/documents/{id}` | Detailed document metadata, sections & page previews | Phase 2 |
-| `GET` | `/documents/{id}/pages` | Full extracted page texts, boundaries & tables | Phase 2 |
+| `GET` | `/documents/{id}` | Detailed document metadata | Phase 2 |
 | `DELETE`| `/documents/{id}` | Remove document, physical files & cached parsing | Phase 2 |
 | `POST`| `/chat/query` | Execute grounded RAG query with citations | Phase 6 |
 | `GET` | `/chat/history` | Retrieve query and citation history | Phase 6 & 7 |
+| `POST` | `/search/semantic` | Retrieve top-k semantic chunks with similarity scores | Phase 6 |
+| `GET` | `/analysis/architecture` | Extract architecture model view | Phase 5 |
 
 ---
 
@@ -250,7 +221,7 @@ The application uses SQLite with standard SQL syntax so it can migrate to Postgr
 2. **Why preserve Page Numbers during PDF Extraction?**
    If an engineer asks about the *Gateway Routing Table*, the answer must cite Page 42 so the engineer can independently verify it against the approved OEM specification.
 3. **Decoupled Architecture**:
-   The Streamlit frontend never queries the vector database or SQLite directly. All operations pass through the FastAPI REST layer, ensuring loose coupling and production readiness.
+   The React frontend never queries the vector database or SQLite directly. All operations pass through the FastAPI REST layer, ensuring loose coupling and production readiness.
 
 ---
 

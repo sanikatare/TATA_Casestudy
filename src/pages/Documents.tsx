@@ -17,14 +17,17 @@ export const DocumentsPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [chunkModalDoc, setChunkModalDoc] = useState<DocumentItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDocs() {
       try {
         const list = await getDocuments();
         setDocuments(list);
+        setErrorMsg(null);
       } catch (e) {
         console.error('Document load error', e);
+        setErrorMsg(e instanceof Error ? e.message : 'Unable to load documents from backend.');
       } finally {
         setLoading(false);
       }
@@ -34,16 +37,22 @@ export const DocumentsPage: React.FC = () => {
 
   const handleUploadSuccess = (newDoc: DocumentItem) => {
     setDocuments((prev) => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
+    setErrorMsg(null);
   };
 
   const handleDelete = async (docId: string) => {
-    if (confirm('Are you sure you want to remove this specification and its vector index?')) {
-      await deleteDocument(docId);
-      setDocuments((prev) => prev.filter(d => d.id !== docId));
-      if (selectedDoc?.id === docId) {
-        setSelectedDoc(null);
-        setShowDetailModal(false);
+    try {
+      if (confirm('Are you sure you want to remove this specification and its vector index?')) {
+        await deleteDocument(docId);
+        setDocuments((prev) => prev.filter(d => d.id !== docId));
+        setErrorMsg(null);
+        if (selectedDoc?.id === docId) {
+          setSelectedDoc(null);
+          setShowDetailModal(false);
+        }
       }
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Unable to delete document.');
     }
   };
 
@@ -94,6 +103,12 @@ export const DocumentsPage: React.FC = () => {
       </div>
 
       {/* Upload Area */}
+      {errorMsg && (
+        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
+          {errorMsg}
+        </div>
+      )}
+
       <UploadZone
         onUploadSuccess={handleUploadSuccess}
         onUploadFile={uploadDocument}
