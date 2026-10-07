@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, ShieldAlert, Cpu, ArrowRight } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { SoftwareComponent, PortInterface } from '../types/autosar';
 
 interface ArchitectureGraphProps {
@@ -11,112 +11,90 @@ export const ArchitectureGraph: React.FC<ArchitectureGraphProps> = ({ components
   const [selectedComponent, setSelectedComponent] = useState<SoftwareComponent>(components[0]);
 
   return (
-    <div className="space-y-7">
-      {/* Notice on AI-Extracted Candidate status */}
-      <div className="p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-950 flex items-start gap-4 shadow-2xs">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="space-y-1.5">
-          <div className="font-bold text-amber-950 text-sm">
-            AI-Extracted Candidate Architecture Notice
-          </div>
-          <p className="text-xs leading-relaxed text-amber-900 font-normal">
-            The software components, interfaces, and port bindings below are extracted automatically by semantic parsing and RAG entity recognition from the ingested AUTOSAR High-Level Design document. This output represents <strong>AI-extracted candidates</strong> and does not constitute formally certified OEM safety release artifacts under ISO 26262.
+    <div className="space-y-6">
+      {/* Topology Selector */}
+      <div className="p-6 rounded-xl bg-white border border-blue-100/90 shadow-2xs space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-blue-950 tracking-tight flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-600" />
+            <span>Virtual Functional Bus (VFB) Topology</span>
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Select a software component to view port bindings and interface allocations
           </p>
         </div>
-      </div>
 
-      {/* Interactive ECU Architecture Topology Visualizer */}
-      <div className="p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Layers className="w-5 h-5 text-blue-600" />
-              <span>AUTOSAR Virtual Functional Bus (VFB) Architecture Map</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Select an architectural component block to inspect interface allocations, ASIL decomposition, and port bindings.
-            </p>
-          </div>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 self-start sm:self-auto">
-            Interactive Topology
-          </span>
-        </div>
-
-        {/* Component Topology Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Component Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {components.map((comp) => {
             const isSelected = selectedComponent.name === comp.name;
             return (
               <button
                 key={comp.name}
                 onClick={() => setSelectedComponent(comp)}
-                className={`p-5 rounded-2xl border text-left transition-all duration-150 cursor-pointer ${
+                className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-md transform -translate-y-0.5'
-                    : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 hover:bg-white'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                    : 'bg-blue-50/30 border-blue-100/90 hover:border-blue-300 hover:bg-blue-50/60'
                 }`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    comp.asil === 'ASIL-D'
-                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[11px] font-bold ${
+                    isSelected
+                      ? 'text-blue-100'
+                      : comp.asil === 'ASIL-D'
+                      ? 'text-blue-900 bg-blue-100/80 px-1.5 py-0.5 rounded'
                       : comp.asil === 'ASIL-B'
-                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                      : 'bg-slate-200 text-slate-800'
+                      ? 'text-blue-700 bg-blue-100/50 px-1.5 py-0.5 rounded'
+                      : 'text-slate-500'
                   }`}>
                     {comp.asil}
                   </span>
-                  <span className={`text-xs ${isSelected ? 'text-slate-300' : 'text-slate-500'} font-medium`}>
+                  <span className={`text-[11px] ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
                     {comp.periodicity}
                   </span>
                 </div>
 
-                <div className={`font-bold text-xs truncate ${isSelected ? 'text-white' : 'text-slate-900'}`} title={comp.name}>
+                <div className={`font-bold text-xs truncate ${isSelected ? 'text-white' : 'text-blue-950'}`} title={comp.name}>
                   {comp.name}
                 </div>
-                <div className={`text-xs mt-1 truncate ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
+                <div className={`text-[11px] mt-0.5 truncate ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
                   {comp.type}
                 </div>
 
-                <div className={`mt-4 pt-3 border-t flex items-center justify-between text-xs ${
-                  isSelected ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-500'
+                <div className={`mt-3 pt-2.5 border-t flex items-center justify-between text-[11px] ${
+                  isSelected ? 'border-blue-500 text-blue-100' : 'border-blue-100 text-slate-500'
                 }`}>
                   <span>{comp.ports.length} Ports</span>
-                  <span className={`font-bold ${isSelected ? 'text-blue-300' : 'text-blue-700'}`}>{comp.ecu}</span>
+                  <span className={isSelected ? 'text-white font-semibold' : 'text-blue-900 font-semibold'}>{comp.ecu}</span>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Selected Component Deep-Dive Inspector */}
-        <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200/90 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-3">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
-              Component Candidate Details
+        {/* Selected Component Details */}
+        <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div className="space-y-1.5">
+            <span className="text-[10px] text-blue-600 uppercase font-bold tracking-wider">
+              Selected Component
             </span>
-            <div className="text-base font-extrabold text-slate-900 leading-snug">{selectedComponent.name}</div>
-            <div className="text-xs text-slate-700">
-              Allocated ECU Host: <strong className="text-slate-900">{selectedComponent.ecu}</strong>
-            </div>
-            <div className="text-xs text-slate-700">
-              Execution Rate: <strong className="text-blue-700 font-bold">{selectedComponent.periodicity}</strong>
-            </div>
-            <div className="text-xs text-slate-700">
-              Safety Classification: <strong className="text-rose-700 font-bold">{selectedComponent.asil}</strong>
-            </div>
+            <div className="text-sm font-bold text-blue-950">{selectedComponent.name}</div>
+            <div className="text-slate-600">ECU: <span className="font-semibold text-blue-900">{selectedComponent.ecu}</span></div>
+            <div className="text-slate-600">Rate: <span className="font-semibold text-blue-900">{selectedComponent.periodicity}</span></div>
+            <div className="text-slate-600">ASIL: <span className="font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">{selectedComponent.asil}</span></div>
           </div>
 
-          <div className="space-y-3 md:col-span-2">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
-              Bound AUTOSAR Ports (PPort / RPort)
+          <div className="space-y-2 md:col-span-2">
+            <span className="text-[10px] text-blue-600 uppercase font-bold tracking-wider">
+              Bound Ports ({selectedComponent.ports.length})
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {selectedComponent.ports.map((port, pIdx) => (
-                <div key={pIdx} className="p-3 rounded-xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-2xs">
-                  <span className="text-slate-900 truncate font-bold">{port}</span>
-                  <span className="text-[10px] font-bold text-blue-800 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
-                    {port.startsWith('P_') ? 'PPort (Provider)' : port.startsWith('R_') ? 'RPort (Receiver)' : 'PRPort'}
+                <div key={pIdx} className="p-2.5 rounded-lg bg-white border border-blue-100 flex items-center justify-between text-xs">
+                  <span className="text-blue-950 font-semibold truncate">{port}</span>
+                  <span className="text-[10px] text-blue-600 font-bold shrink-0 ml-2 bg-blue-50 px-1.5 py-0.5 rounded">
+                    {port.startsWith('P_') ? 'PPort' : port.startsWith('R_') ? 'RPort' : 'PRPort'}
                   </span>
                 </div>
               ))}
@@ -125,45 +103,36 @@ export const ArchitectureGraph: React.FC<ArchitectureGraphProps> = ({ components
         </div>
       </div>
 
-      {/* Interfaces & Signal Bus Mapping Table */}
-      <div className="p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Extracted Interface Candidates & Signal Elements
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Sender-Receiver and Client-Server communication contracts.
-            </p>
-          </div>
-          <span className="text-xs font-bold text-slate-500">
-            AUTOSAR RTE Matrix
-          </span>
+      {/* Interfaces & Signal Table */}
+      <div className="p-6 rounded-xl bg-white border border-blue-100/90 shadow-2xs space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-blue-950 tracking-tight">
+            Interface Contracts & Signal Elements
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Sender-Receiver and Client-Server bindings between software components
+          </p>
         </div>
 
-        <div className="overflow-x-auto border border-slate-200/90 rounded-xl">
+        <div className="overflow-x-auto border border-blue-100 rounded-lg">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/90 text-slate-700 border-b border-slate-200/90 uppercase tracking-wider text-[11px] font-bold">
+            <thead className="bg-blue-50/60 text-blue-950 border-b border-blue-100 font-bold">
               <tr>
-                <th className="p-3.5">Interface Name</th>
-                <th className="p-3.5">Pattern</th>
-                <th className="p-3.5">Provider Component</th>
-                <th className="p-3.5">Consumer Components</th>
-                <th className="p-3.5">Data Elements / Methods</th>
+                <th className="p-3">Interface</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Provider</th>
+                <th className="p-3">Consumers</th>
+                <th className="p-3">Data Elements</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-blue-50/60">
               {interfaces.map((iface, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/80">
-                  <td className="p-3.5 text-blue-700 font-bold">{iface.name}</td>
-                  <td className="p-3.5 text-slate-800">
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold">
-                      {iface.kind}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-slate-900 font-bold">{iface.provider}</td>
-                  <td className="p-3.5 text-slate-700">{iface.consumers.join(', ')}</td>
-                  <td className="p-3.5 text-slate-600 text-xs">
+                <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="p-3 text-blue-600 font-bold">{iface.name}</td>
+                  <td className="p-3 text-slate-600 text-[11px] font-medium">{iface.kind}</td>
+                  <td className="p-3 text-blue-950 font-semibold">{iface.provider}</td>
+                  <td className="p-3 text-slate-600">{iface.consumers.join(', ')}</td>
+                  <td className="p-3 text-blue-800 text-[11px] font-mono">
                     {iface.dataElements.join(' · ')}
                   </td>
                 </tr>

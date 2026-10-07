@@ -35,8 +35,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, description, action
         </div>
 
         {/* Grounding guarantee badge */}
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-800">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 font-medium">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
           <span className="font-semibold">100% Page Verified Citations</span>
         </div>
 

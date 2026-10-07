@@ -10,7 +10,7 @@ interface MetricCardProps {
     value: string;
     isPositive?: boolean;
   };
-  accentColor?: 'blue' | 'violet' | 'green' | 'amber';
+  accentColor?: 'blue' | 'sky' | 'navy' | 'indigo' | 'violet' | 'green' | 'amber';
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -21,50 +21,45 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   trend,
   accentColor = 'blue'
 }) => {
-  const accentStyles = {
-    blue: 'border-slate-200/90 hover:border-blue-400 bg-white hover:shadow-md',
-    violet: 'border-slate-200/90 hover:border-purple-400 bg-white hover:shadow-md',
-    green: 'border-slate-200/90 hover:border-emerald-400 bg-white hover:shadow-md',
-    amber: 'border-slate-200/90 hover:border-amber-400 bg-white hover:shadow-md'
+  // Pure blue and white shades
+  const iconColors: Record<string, string> = {
+    blue: 'text-blue-600 bg-blue-50 border border-blue-100',
+    sky: 'text-sky-600 bg-sky-50 border border-sky-100',
+    navy: 'text-blue-900 bg-blue-100/60 border border-blue-200/60',
+    indigo: 'text-blue-700 bg-blue-50 border border-blue-100',
+    violet: 'text-blue-600 bg-blue-50 border border-blue-100',
+    green: 'text-blue-600 bg-blue-50 border border-blue-100',
+    amber: 'text-sky-600 bg-sky-50 border border-sky-100'
   };
 
-  const iconBg = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    violet: 'bg-purple-50 border-purple-200 text-purple-700',
-    green: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    amber: 'bg-amber-50 border-amber-200 text-amber-700'
-  };
+  const selectedColor = iconColors[accentColor] || iconColors.blue;
 
   return (
-    <div className={`p-6 rounded-2xl border transition-all duration-200 shadow-xs ${accentStyles[accentColor]}`}>
-      <div className="flex items-center justify-between mb-3.5">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+    <div className="p-5 rounded-xl border border-blue-100/90 bg-white hover:border-blue-300 hover:shadow-xs transition-all duration-150 group">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-slate-500 group-hover:text-blue-950 transition-colors">
           {label}
         </span>
-        <div className={`p-2.5 rounded-xl border ${iconBg[accentColor]}`}>
+        <div className={`p-2 rounded-lg transition-transform group-hover:scale-105 duration-150 ${selectedColor}`}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
 
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="text-3xl font-extrabold tracking-tight text-slate-900">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-2xl font-bold tracking-tight text-blue-950">
           {value}
         </div>
         {trend && (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
-            trend.isPositive
-              ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-              : 'text-slate-600 bg-slate-50 border-slate-200'
-          }`}>
+          <span className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
             {trend.value}
           </span>
         )}
       </div>
 
       {subtext && (
-        <p className="text-xs text-slate-600 mt-2 font-medium">
+        <div className="text-xs text-slate-500 mt-2 font-normal">
           {subtext}
-        </p>
+        </div>
       )}
     </div>
   );

@@ -9,37 +9,30 @@ interface StatusBadgeProps {
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 'sm' }) => {
   const norm = status.toUpperCase();
 
-  let dotColor = 'bg-emerald-500';
-  let textColor = 'text-emerald-800';
-  let bgColor = 'bg-emerald-50';
-  let borderColor = 'border-emerald-300';
+  // Strict Blue & White Palette
+  let dotColor = 'bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)]';
+  let textColor = 'text-blue-800';
 
   if (['OPERATIONAL', 'ONLINE', 'CONNECTED', 'HEALTHY', 'INDEXED', 'SUCCESS'].includes(norm)) {
-    dotColor = 'bg-emerald-500';
-    textColor = 'text-emerald-800';
-    bgColor = 'bg-emerald-50/90';
-    borderColor = 'border-emerald-300';
+    dotColor = 'bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)]';
+    textColor = 'text-blue-700';
   } else if (['DEGRADED', 'PROCESSING', 'PENDING', 'NO_GROUNDING'].includes(norm)) {
-    dotColor = 'bg-amber-500';
-    textColor = 'text-amber-800';
-    bgColor = 'bg-amber-50/90';
-    borderColor = 'border-amber-300';
+    dotColor = 'bg-sky-400';
+    textColor = 'text-sky-700';
   } else if (['FAILED', 'OFFLINE'].includes(norm)) {
-    dotColor = 'bg-rose-500';
-    textColor = 'text-rose-800';
-    bgColor = 'bg-rose-50/90';
-    borderColor = 'border-rose-300';
+    dotColor = 'bg-slate-400';
+    textColor = 'text-slate-600';
   }
 
   const displayText = label || norm;
 
   return (
     <span
-      className={`inline-flex items-center gap-2 font-bold rounded-full border shadow-2xs ${bgColor} ${borderColor} ${textColor} ${
-        size === 'sm' ? 'px-2.5 py-0.5 text-[11px]' : 'px-3 py-1 text-xs'
+      className={`inline-flex items-center gap-1.5 font-medium ${textColor} ${
+        size === 'sm' ? 'text-[11px]' : 'text-xs'
       }`}
     >
-      <span className={`w-2 h-2 rounded-full ${dotColor} ${norm === 'PROCESSING' ? 'animate-pulse' : ''}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${['PROCESSING', 'ONLINE', 'OPERATIONAL'].includes(norm) ? 'animate-pulse' : ''}`} />
       <span>{displayText}</span>
     </span>
   );

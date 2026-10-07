@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Database, Cpu, Sliders, Check } from 'lucide-react';
+import { Database, Cpu, Check } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const [topK, setTopK] = useState(5);
@@ -8,62 +8,57 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = () => {
     setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 2500);
+    setTimeout(() => setSavedNotice(false), 2000);
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* Top Banner */}
-      <div className="pb-6 border-b border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-3xl">
+      {/* Header */}
+      <div className="pb-4 border-b border-blue-100/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            System Configuration & Hyperparameters
+          <h2 className="text-xl font-bold text-blue-950 tracking-tight">
+            Configuration
           </h2>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
-            Inspect RAG parameters, embedding configurations, vector persistence paths, and retrieval limits.
+          <p className="text-xs text-slate-500 mt-1 font-normal">
+            Model parameters, chunking sizes, and retrieval depth.
           </p>
         </div>
 
         <button
           onClick={handleSave}
-          className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto shadow-xs"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shadow-xs shadow-blue-500/20"
         >
-          {savedNotice ? <Check className="w-4 h-4 text-emerald-400" /> : <Sliders className="w-4 h-4 text-blue-400" />}
-          <span>{savedNotice ? 'Parameters Saved' : 'Save Parameters'}</span>
+          {savedNotice ? <Check className="w-3.5 h-3.5 text-white" /> : null}
+          <span>{savedNotice ? 'Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
-      {/* Configuration Group 1: Model & RAG Orchestration */}
-      <div className="p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-          <div className="p-2 rounded-lg bg-purple-50 text-purple-700">
-            <Cpu className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Model & RAG Orchestration Parameters
-            </h3>
-            <p className="text-xs text-slate-500">Inference provider, embedding depth, and vector chunking</p>
-          </div>
+      {/* Model & Retrieval */}
+      <div className="p-6 rounded-xl bg-white border border-blue-100/90 shadow-2xs space-y-5">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-blue-50">
+          <Cpu className="w-4 h-4 text-blue-600" />
+          <h3 className="text-sm font-bold text-blue-950">
+            Model & Retrieval Parameters
+          </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-slate-500 text-[10px] font-bold uppercase">EMBEDDING MODEL</span>
-            <div className="text-slate-900 font-extrabold text-sm">BAAI/bge-small-en-v1.5</div>
-            <div className="text-xs text-slate-600">384 Dimensions · Dense technical document vector space</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-1">
+            <span className="text-[10px] font-bold text-blue-600 uppercase">Embedding Model</span>
+            <div className="text-blue-950 font-bold">BAAI/bge-small-en-v1.5</div>
+            <div className="text-slate-500 text-[11px]">384 dimensions · Normalized space</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-slate-500 text-[10px] font-bold uppercase">LLM INFERENCE ENGINE</span>
-            <div className="text-slate-900 font-extrabold text-sm">Local / Zero-Hallucination Guard</div>
-            <div className="text-xs text-slate-600">Strict grounding instruction template active</div>
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-1">
+            <span className="text-[10px] font-bold text-blue-600 uppercase">Inference Engine</span>
+            <div className="text-blue-950 font-bold">Deterministic Grounded Synthesizer</div>
+            <div className="text-slate-500 text-[11px]">Negative constraint enforcement</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 text-[10px] font-bold uppercase">CHUNK TOKEN SIZE</span>
-              <span className="text-blue-700 font-bold">{chunkSize} Tokens</span>
+              <span className="text-slate-500 text-[10px] font-semibold uppercase">Chunk Token Size</span>
+              <span className="text-blue-600 font-bold">{chunkSize} tokens</span>
             </div>
             <input
               type="range"
@@ -74,13 +69,12 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setChunkSize(Number(e.target.value))}
               className="w-full accent-blue-600 cursor-pointer"
             />
-            <div className="text-[11px] text-slate-500">Preserves ECU section headers and interface tables</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 text-[10px] font-bold uppercase">TOP-K RETRIEVAL DEPTH</span>
-              <span className="text-emerald-700 font-bold">k = {topK} Chunks</span>
+              <span className="text-slate-500 text-[10px] font-semibold uppercase">Top-K Retrieval</span>
+              <span className="text-blue-600 font-bold">k = {topK}</span>
             </div>
             <input
               type="range"
@@ -89,58 +83,33 @@ export const SettingsPage: React.FC = () => {
               step="1"
               value={topK}
               onChange={(e) => setTopK(Number(e.target.value))}
-              className="w-full accent-emerald-600 cursor-pointer"
+              className="w-full accent-blue-600 cursor-pointer"
             />
-            <div className="text-[11px] text-slate-500">Cosine similarity cutoff threshold: 0.70</div>
           </div>
         </div>
       </div>
 
-      {/* Configuration Group 2: Persistence & Databases */}
-      <div className="p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-          <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Databases & Local Storage Paths
-            </h3>
-            <p className="text-xs text-slate-500">Vector store collection and SQLite database configurations</p>
-          </div>
+      {/* Persistence */}
+      <div className="p-6 rounded-xl bg-white border border-blue-100/90 shadow-2xs space-y-5">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-blue-50">
+          <Database className="w-4 h-4 text-blue-600" />
+          <h3 className="text-sm font-bold text-blue-950">
+            Storage & Persistence
+          </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-slate-500 text-[10px] font-bold uppercase">VECTOR DATABASE</span>
-            <div className="text-slate-900 font-extrabold text-sm">ChromaDB Local Engine</div>
-            <div className="text-xs text-slate-600">Collection: <code className="font-bold">autosar_hld_chunks</code></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-1">
+            <span className="text-[10px] font-bold text-blue-600 uppercase">Vector Store</span>
+            <div className="text-blue-950 font-bold">ChromaDB / In-Memory Fallback</div>
+            <div className="text-slate-500 text-[11px]">./data/chroma</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-slate-500 text-[10px] font-bold uppercase">SQLITE PERSISTENCE</span>
-            <div className="text-slate-900 font-extrabold text-sm">SQLite 3 (ACID Relational)</div>
-            <div className="text-xs text-slate-600">Path: <code className="font-bold">./data/sqlite/autosar_rag.db</code></div>
+          <div className="p-3.5 rounded-lg bg-blue-50/40 border border-blue-100 space-y-1">
+            <span className="text-[10px] font-bold text-blue-600 uppercase">Metadata Store</span>
+            <div className="text-blue-950 font-bold">SQLite 3</div>
+            <div className="text-slate-500 text-[11px]">./data/sqlite/autosar_hld.db</div>
           </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 md:col-span-2">
-            <span className="text-slate-500 text-[10px] font-bold uppercase">REST API ENDPOINT</span>
-            <div className="text-blue-700 font-extrabold text-sm">AI Studio Node Engine (Port 3000)</div>
-            <div className="text-xs text-slate-600">
-              Configurable via <code className="font-bold">VITE_BACKEND_URL</code> environment variable. Local high-speed in-memory simulation active.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Security & Secret Masking Guarantee */}
-      <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-4 text-xs text-emerald-900 shadow-2xs">
-        <Shield className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="font-extrabold text-sm text-emerald-950">Zero Hardcoded Secrets Policy</span>
-          <p className="leading-relaxed font-medium">
-            All API credentials and model tokens are loaded strictly server-side via environment variables. No private secrets or credentials are baked into client bundles.
-          </p>
         </div>
       </div>
     </div>

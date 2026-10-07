@@ -11,44 +11,44 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({ component })
   const getIcon = (cat: PipelineComponentStatus['category']) => {
     switch (cat) {
       case 'API':
-        return <Server className="w-5 h-5 text-sky-600" />;
+        return <Server className="w-4 h-4 text-sky-600" />;
       case 'STORAGE':
-        return <Database className="w-5 h-5 text-blue-600" />;
+        return <Database className="w-4 h-4 text-blue-600" />;
       case 'EMBEDDING':
-        return <Cpu className="w-5 h-5 text-purple-600" />;
+        return <Cpu className="w-4 h-4 text-blue-700" />;
       case 'LLM':
-        return <Radio className="w-5 h-5 text-blue-700" />;
+        return <Radio className="w-4 h-4 text-blue-800" />;
       case 'ORCHESTRATOR':
-        return <Layers className="w-5 h-5 text-emerald-600" />;
+        return <Layers className="w-4 h-4 text-sky-600" />;
       default:
-        return <HardDrive className="w-5 h-5 text-slate-500" />;
+        return <HardDrive className="w-4 h-4 text-slate-500" />;
     }
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 transition-all shadow-xs hover:shadow-sm space-y-4">
+    <div className="p-4 rounded-xl bg-white border border-blue-100 hover:border-blue-300 transition-all shadow-2xs space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-100">
             {getIcon(component.category)}
           </div>
           <div>
-            <h4 className="font-bold text-sm text-slate-900 tracking-tight">
+            <h4 className="font-bold text-xs text-blue-950 tracking-tight">
               {component.name}
             </h4>
-            <div className="text-xs text-slate-500 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5">
               {component.category} · {component.version || 'Active'}
             </div>
           </div>
         </div>
 
-        <StatusBadge status={component.status} />
+        <StatusBadge status={component.status} size="sm" />
       </div>
 
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-        <span>Target: <span className="text-slate-800 font-bold">{component.target || 'Local'}</span></span>
+      <div className="pt-2.5 border-t border-blue-50 flex items-center justify-between text-xs text-slate-500 font-normal">
+        <span>Target: <span className="text-blue-950 font-semibold">{component.target || 'Local'}</span></span>
         {component.latency_ms !== undefined && (
-          <span className="text-emerald-700 font-extrabold">{component.latency_ms}ms latency</span>
+          <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded">{component.latency_ms}ms latency</span>
         )}
       </div>
     </div>

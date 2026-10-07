@@ -222,7 +222,7 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
           <div className="space-y-1">
             <div className="flex justify-between font-bold">
               <span className="text-slate-600">Chunk Overlap:</span>
-              <span className="text-purple-700">{chunkOverlap} tokens</span>
+              <span className="text-blue-700">{chunkOverlap} tokens</span>
             </div>
             <input
               type="range"
@@ -231,7 +231,7 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
               step="8"
               value={chunkOverlap}
               onChange={(e) => setChunkOverlap(Number(e.target.value))}
-              className="w-full accent-purple-600 cursor-pointer"
+              className="w-full accent-blue-600 cursor-pointer"
             />
             <span className="text-[10px] text-slate-500">Bridges cross-sentence boundaries</span>
           </div>
@@ -240,7 +240,7 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
           <div className="space-y-1">
             <div className="flex justify-between font-bold">
               <span className="text-slate-600">Drop Fragment Threshold:</span>
-              <span className="text-amber-700">{minChunkTokens} tokens</span>
+              <span className="text-blue-800">{minChunkTokens} tokens</span>
             </div>
             <input
               type="range"
@@ -249,26 +249,26 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
               step="5"
               value={minChunkTokens}
               onChange={(e) => setMinChunkTokens(Number(e.target.value))}
-              className="w-full accent-amber-600 cursor-pointer"
+              className="w-full accent-blue-600 cursor-pointer"
             />
             <span className="text-[10px] text-slate-500">Filters trivial headers/footers</span>
           </div>
 
           {/* Real-time Stats */}
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200/90 flex items-center justify-around text-center">
+          <div className="p-2.5 rounded-xl bg-white border border-blue-100 flex items-center justify-around text-center">
             <div>
               <div className="text-[10px] font-bold text-slate-500 uppercase">CHUNKS</div>
               <div className="text-base font-extrabold text-blue-700">{debugStats.totalChunks}</div>
             </div>
-            <div className="w-px h-6 bg-slate-200" />
+            <div className="w-px h-6 bg-blue-100" />
             <div>
               <div className="text-[10px] font-bold text-slate-500 uppercase">AVG TOKENS</div>
-              <div className="text-base font-extrabold text-slate-900">{debugStats.avgChunkTokens}</div>
+              <div className="text-base font-extrabold text-blue-950">{debugStats.avgChunkTokens}</div>
             </div>
-            <div className="w-px h-6 bg-slate-200" />
+            <div className="w-px h-6 bg-blue-100" />
             <div>
               <div className="text-[10px] font-bold text-slate-500 uppercase">DROPPED</div>
-              <div className="text-base font-extrabold text-amber-700">{debugStats.droppedSmallChunks}</div>
+              <div className="text-base font-extrabold text-blue-700">{debugStats.droppedSmallChunks}</div>
             </div>
           </div>
         </div>
@@ -382,7 +382,7 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
                         <div className="flex items-center gap-2 text-[11px]">
                           <span className="text-slate-500 font-bold">{chunk.token_count} tok</span>
                           <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                            chunk.metadata.asil_level === 'ASIL-D' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                            chunk.metadata.asil_level === 'ASIL-D' ? 'bg-blue-100 text-blue-900 font-bold' : 'bg-blue-50 text-blue-700'
                           }`}>
                             {chunk.metadata.asil_level || 'QM'}
                           </span>
@@ -454,22 +454,22 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
               </div>
 
               {/* Card 2: Chunk Overlap */}
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2.5 text-purple-700 font-bold text-sm">
+              <div className="p-6 rounded-2xl bg-blue-50/40 border border-blue-100 space-y-4">
+                <div className="flex items-center gap-2.5 text-blue-700 font-bold text-sm">
                   <Layers className="w-5 h-5" />
                   <h4>Chunk Overlap Trade-offs (Tokens)</h4>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="font-bold text-slate-900">Purpose of Overlap (32 - 64 tokens):</div>
+                  <div className="font-bold text-blue-950">Purpose of Overlap (32 - 64 tokens):</div>
                   <ul className="list-disc pl-4 space-y-1 text-slate-700">
                     <li>Prevents the "boundary cliff" where a crucial sentence or table row is severed right in the middle between chunk N and chunk N+1.</li>
                     <li>Ensures transitional phrases (e.g. "Consequently, the Dem module transitions to Safe State...") carry over to both chunks.</li>
                   </ul>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-200">
-                  <div className="font-bold text-slate-900">Excessive Overlap (&gt; 128 tokens):</div>
+                <div className="space-y-2 pt-2 border-t border-blue-100">
+                  <div className="font-bold text-blue-950">Excessive Overlap (&gt; 128 tokens):</div>
                   <ul className="list-disc pl-4 space-y-1 text-slate-700">
                     <li>Causes near-duplicate chunks in the Top-K retrieval set, wasting LLM prompt window space and inflating token usage.</li>
                     <li>Recommendation: 10% to 15% of the total chunk size (e.g. 48 tokens overlap for a 384-token chunk).</li>
@@ -494,9 +494,9 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
         {/* Tab 3: Unit Tests Suite */}
         {activeTab === 'TESTS' && (
           <div className="flex-1 overflow-y-auto p-8 space-y-6 max-w-3xl mx-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div className="flex items-center justify-between pb-4 border-b border-blue-100">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">
+                <h3 className="text-xl font-bold text-blue-950">
                   Automated Chunking Test Suite
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -506,17 +506,17 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
 
               <button
                 onClick={runChunkingUnitTests}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-xs transition-all"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-xs shadow-blue-500/20 transition-all"
               >
-                <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                <Play className="w-4 h-4 text-white fill-white" />
                 <span>Run Test Suite</span>
               </button>
             </div>
 
             {!testResults ? (
-              <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 space-y-3">
-                <Bug className="w-8 h-8 text-slate-400 mx-auto" />
-                <div className="text-sm font-bold text-slate-700">No Tests Executed Yet</div>
+              <div className="p-12 text-center border-2 border-dashed border-blue-200 rounded-3xl bg-blue-50/30 space-y-3">
+                <Bug className="w-8 h-8 text-blue-400 mx-auto" />
+                <div className="text-sm font-bold text-blue-950">No Tests Executed Yet</div>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   Click "Run Test Suite" to evaluate the current chunking configuration against the 5 core traceability invariants.
                 </p>
@@ -526,17 +526,17 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
                 {testResults.map((t, idx) => (
                   <div
                     key={idx}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3.5 shadow-2xs"
+                    className="p-4 rounded-2xl bg-white border border-blue-100 flex items-start gap-3.5 shadow-2xs"
                   >
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div className="space-y-1">
-                      <div className="text-xs font-bold text-slate-900">{t.name}</div>
+                      <div className="text-xs font-bold text-blue-950">{t.name}</div>
                       <div className="text-[11px] text-slate-600">{t.message}</div>
                     </div>
                   </div>
                 ))}
 
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-900 text-center">
+                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs font-bold text-blue-900 text-center">
                   All 5 Traceability & Invariant Tests Passed Successfully (100% Coverage)
                 </div>
               </div>
@@ -545,14 +545,14 @@ Classification: ASIL-D. Redundant dual-channel sensor verification is executed i
         )}
 
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+        <div className="px-7 py-4 border-t border-blue-100 bg-blue-50/40 flex items-center justify-between text-xs">
           <div className="text-slate-500">
-            Document ID: <strong className="text-slate-900">{document.id}</strong> · Status: <span className="text-emerald-700 font-bold">{document.processing_status}</span>
+            Document ID: <strong className="text-blue-950">{document.id}</strong> · Status: <span className="text-blue-700 font-bold">{document.processing_status}</span>
           </div>
 
           <button
             onClick={onClose}
-            className="px-5 py-2 font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer shadow-2xs"
+            className="px-5 py-2 font-bold text-blue-900 hover:text-blue-950 bg-white hover:bg-blue-50 border border-blue-200 rounded-xl transition-all cursor-pointer shadow-2xs"
           >
             Close Inspector
           </button>
