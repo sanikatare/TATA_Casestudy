@@ -8,7 +8,20 @@ except ImportError:
         def __init__(self, **kwargs):
             for k, v in self.__class__.__dict__.items():
                 if not k.startswith("_") and not callable(v):
-                    setattr(self, k, os.environ.get(k, v))
+                    env_val = os.environ.get(k)
+                    if env_val is not None:
+                        try:
+                            if isinstance(v, bool):
+                                env_val = env_val.lower() in ("true", "1", "yes")
+                            elif isinstance(v, int):
+                                env_val = int(env_val)
+                            elif isinstance(v, float):
+                                env_val = float(env_val)
+                        except (ValueError, TypeError):
+                            pass
+                        setattr(self, k, env_val)
+                    else:
+                        setattr(self, k, v)
             for k, v in kwargs.items():
                 setattr(self, k, v)
     def SettingsConfigDict(**kwargs):
