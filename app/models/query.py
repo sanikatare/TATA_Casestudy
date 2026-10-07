@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 try:
     from pydantic import BaseModel, Field
 except ImportError:
@@ -20,6 +20,7 @@ class QueryRequest(BaseModel):
     question: str = ""
     document_id: Optional[str] = None
     top_k: Optional[int] = 5
+    include_trace: Optional[bool] = True
 
 
 class QueryResponse(BaseModel):
@@ -33,3 +34,4 @@ class QueryResponse(BaseModel):
     status: str = "SUCCESS"
     confidence_score: float = 0.95
     citations: List[Citation] = []
+    rag_trace: Optional[Dict[str, Any]] = None

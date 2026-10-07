@@ -20,12 +20,14 @@ class DocumentChunker:
 
     def __init__(
         self,
-        chunk_size_tokens: int = settings.CHUNK_SIZE,       # Default: ~512 tokens
-        chunk_overlap_tokens: int = settings.CHUNK_OVERLAP, # Default: ~64 tokens
-        min_chunk_chars: int = 80                            # Minimum meaningful chunk length
+        chunk_size_tokens: Optional[int] = None,
+        chunk_overlap_tokens: Optional[int] = None,
+        min_chunk_chars: int = 80,
+        chunk_size: Optional[int] = None,
+        chunk_overlap: Optional[int] = None,
     ):
-        self.chunk_size_tokens = chunk_size_tokens
-        self.chunk_overlap_tokens = chunk_overlap_tokens
+        self.chunk_size_tokens = chunk_size or chunk_size_tokens or settings.CHUNK_SIZE
+        self.chunk_overlap_tokens = chunk_overlap or chunk_overlap_tokens or settings.CHUNK_OVERLAP
         self.min_chunk_chars = min_chunk_chars
 
         # Approximate token-to-character ratio (1 token ≈ 4 characters in English technical text)
@@ -250,25 +252,32 @@ class DocumentChunker:
         token_est = max(1, char_count // 4)
         word_count = len(text.split())
 
+        version_val = document.metadata.get("version", "1.0") if hasattr(document, "metadata") and isinstance(document.metadata, dict) else "1.0"
         metadata = {
             "chunk_id": chunk_id,
             "document_id": document.document_id,
+            "filename": document.filename,
             "source_filename": document.filename,
             "page_number": page.page_number,
+            "section": section,
             "section_title": section,
+            "version": version_val,
+            "source_text": text,
             "char_count": char_count,
             "word_count": word_count,
             "token_estimate": token_est,
-            "ecu_domain": document.metadata.get("ecu_domain", "ECU Specification")
+            "ecu_domain": document.metadata.get("ecu_domain", "ECU Specification") if hasattr(document, "metadata") and isinstance(document.metadata, dict) else "ECU Specification"
         }
 
         return Chunk(
             chunk_id=chunk_id,
             document_id=document.document_id,
+            filename=document.filename,
             page_number=page.page_number,
             section=section,
             text=text,
             source_filename=document.filename,
+            version=version_val,
             chunk_index=chunk_idx,
             metadata=metadata
         )

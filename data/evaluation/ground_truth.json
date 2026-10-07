@@ -98,5 +98,155 @@
     "target_page": 22,
     "target_section": "2.7 Fault Detection and Safe State Invariants",
     "keywords": ["20ms", "Fault Reaction Time Limit", "FRTL", "safe-state"]
+  },
+  {
+    "id": "TC-11",
+    "category": "Ethernet Backbone",
+    "question": "What is the physical layer specification and bandwidth allocated for Automotive Ethernet Eth0?",
+    "expected_answer": "Automotive Ethernet Eth0 utilizes 100BASE-T1 BroadR-Reach single twisted-pair physical layer operating at 100 Mbps.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 45,
+    "target_section": "4.5 Automotive Ethernet Backbone Architecture",
+    "keywords": ["100BASE-T1", "100 Mbps", "Ethernet", "BroadR-Reach"]
+  },
+  {
+    "id": "TC-12",
+    "category": "Mode Management",
+    "question": "Which AUTOSAR Basic Software module coordinates vehicle run-modes, startup, and sleep transitions?",
+    "expected_answer": "BswM (Basic Software Mode Manager) coordinates mode arbitrations across multi-core partitions.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 31,
+    "target_section": "3.5 Component Memory & Task Partitioning",
+    "keywords": ["BswM", "Mode Manager", "startup", "sleep"]
+  },
+  {
+    "id": "TC-13",
+    "category": "RTE Communication",
+    "question": "Which software component produces SR_VehicleSpeed and what are its consumer components?",
+    "expected_answer": "BodyControl_SWC provides SR_VehicleSpeed, consumed by PowertrainCoordination_SWC and Gateway_Router_SWC.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 42,
+    "target_section": "4.2 CAN-FD Bus Matrix & SW-C Allocation",
+    "keywords": ["BodyControl_SWC", "SR_VehicleSpeed", "PowertrainCoordination_SWC", "Gateway_Router_SWC"]
+  },
+  {
+    "id": "TC-14",
+    "category": "Memory Partitioning",
+    "question": "How is memory isolation enforced between ASIL-D safety partitions and QM partitions?",
+    "expected_answer": "Memory isolation is enforced by the hardware Memory Protection Unit (MPU) configured via AUTOSAR OS-Applications.",
+    "target_document": "Powertrain_Coordination_SWC_Specification.pdf",
+    "target_page": 14,
+    "target_section": "2.4 Safety Goals & ASIL Decomposition",
+    "keywords": ["MPU", "Memory Protection Unit", "partitioning", "OS-Application"]
+  },
+  {
+    "id": "TC-15",
+    "category": "CAN Interface",
+    "question": "What is the execution period and role of CanIf_Driver in the ECU software stack?",
+    "expected_answer": "CanIf_Driver executes at 1ms periodicity, abstracting CAN controller hardware mailboxes and servicing interrupts.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 24,
+    "target_section": "3.2 Software Component Allocation & Ports",
+    "keywords": ["CanIf", "1ms", "mailboxes", "hardware abstraction"]
+  },
+  {
+    "id": "TC-16",
+    "category": "Diagnostic Protocol",
+    "question": "Which transport protocol is used for diagnostic communication over Automotive Ethernet?",
+    "expected_answer": "Diagnostics over IP (DoIP) conforming to ISO 13400 is utilized over Ethernet port 13400.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 45,
+    "target_section": "4.5 Automotive Ethernet Backbone Architecture",
+    "keywords": ["DoIP", "ISO 13400", "Ethernet", "diagnostics"]
+  },
+  {
+    "id": "TC-17",
+    "category": "Signal Payload",
+    "question": "What is the maximum payload size supported for CAN-FD frames on Channel 0?",
+    "expected_answer": "CAN-FD Channel 0 supports up to 64 bytes of data payload per frame.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 38,
+    "target_section": "4.2 CAN-FD Bus Matrix & Routing Table",
+    "keywords": ["64 bytes", "CAN-FD", "payload"]
+  },
+  {
+    "id": "TC-18",
+    "category": "Diagnostic Debouncing",
+    "question": "What debouncing algorithm does the Diagnostic Event Manager implement for CAN bus-off faults?",
+    "expected_answer": "Dem implements counter-based and time-based debouncing algorithms before qualifying a DTC as confirmed.",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 67,
+    "target_section": "5.1 Dem Module Architecture & DTC Debouncing",
+    "keywords": ["debouncing", "counter-based", "DTC", "Dem"]
+  },
+  {
+    "id": "TC-19",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What is the LiDAR point cloud voxel clustering algorithm implemented in the ADAS Level 5 coprocessor?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (LiDAR voxel clustering is not specified in this Gateway/Powertrain HLD).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-20",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What is the 5G C-V2X direct sidelink PC5 resource allocation mode configured for vehicle-to-pedestrian safety?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (5G C-V2X sidelink is not present in this specification).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-21",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What post-quantum lattice-based public key cryptography algorithm is implemented in the primary secure bootloader?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (Post-quantum cryptography is not documented in this HLD).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-22",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "Which Android Automotive OS HAL audio routing matrix routes multi-zone speaker streams?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (Android Automotive OS HAL audio is out of scope).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-23",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What is the hydrogen fuel cell stack membrane moisture sensor SPI communication protocol?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (Fuel cell membrane moisture sensor is not present).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-24",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What is the thermal junction-to-case resistance Rth-jc of the silicon carbide MOSFET power modules?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (SiC thermal resistance values are not specified).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
+  },
+  {
+    "id": "TC-25",
+    "category": "Negative Constraint (Unanswerable)",
+    "question": "What is the wireless battery management system (wBMS) 2.4 GHz RF hopping sequence duration?",
+    "expected_answer": "The ingested specification excerpts do not contain sufficient evidence to substantiate this answer (wBMS RF hopping sequence is not specified).",
+    "target_document": "ECU_Central_Gateway_HLD_v2.4.pdf",
+    "target_page": 0,
+    "target_section": "None",
+    "keywords": ["not contain sufficient", "not specified"]
   }
 ]

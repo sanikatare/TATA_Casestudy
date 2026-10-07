@@ -114,29 +114,36 @@ class Chunk(BaseModel):
     Chunk
     ├── chunk_id
     ├── document_id
+    ├── filename
     ├── page_number
     ├── section
     ├── text
     ├── source_filename
+    ├── version
     └── metadata
     """
     chunk_id: str = ""
     document_id: str = ""
+    filename: str = ""
     page_number: int = 1
     section: str = "General"
     text: str = ""
     source_filename: str = ""
+    version: str = "1.0"
     chunk_index: int = 0
     metadata: Dict[str, Any] = {}
 
-    def __init__(self, chunk_id: str = "", document_id: str = "", page_number: int = 1, section: str = "General", text: str = "", source_filename: str = "", chunk_index: int = 0, metadata: Optional[Dict[str, Any]] = None, **kwargs):
+    def __init__(self, chunk_id: str = "", document_id: str = "", page_number: int = 1, section: str = "General", text: str = "", source_filename: str = "", filename: str = "", version: str = "1.0", chunk_index: int = 0, metadata: Optional[Dict[str, Any]] = None, **kwargs):
+        resolved_filename = filename or source_filename
         super().__init__(
             chunk_id=chunk_id,
             document_id=document_id,
+            filename=resolved_filename,
             page_number=page_number,
             section=section,
             text=text,
-            source_filename=source_filename,
+            source_filename=resolved_filename,
+            version=version,
             chunk_index=chunk_index,
             metadata=metadata or {},
             **kwargs

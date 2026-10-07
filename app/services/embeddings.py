@@ -50,19 +50,53 @@ class EmbeddingService:
             embeddings = self.model.encode(texts, normalize_embeddings=True)
             return embeddings.tolist()
 
-        # Deterministic semantic hash projection fallback (384-d normalized)
-        # Guarantees identical embeddings for identical text and consistent cosine distance
+        # Deterministic semantic feature hashing projection (384-d L2 normalized)
+        # Uses signed random projection (Hashing Trick: Weinberger et al.) with sublinear TF and bigrams.
+        # Guarantees identical embeddings for identical text, unbiased cosine distance in bag-of-words/n-gram space.
+        stopwords = {
+            "a", "an", "the", "is", "are", "was", "were", "in", "on", "at", "of", "for", "with",
+            "by", "about", "as", "into", "like", "through", "after", "over", "between", "out",
+            "against", "during", "without", "before", "under", "around", "among", "which", "what",
+            "who", "whom", "this", "that", "these", "those", "it", "its", "they", "them", "their",
+            "we", "us", "our", "you", "your", "he", "him", "his", "she", "her", "and", "or", "but",
+            "if", "because", "so", "to", "from", "up", "down", "how", "when", "where", "why", "all",
+            "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not",
+            "only", "own", "same", "than", "too", "very", "can", "will", "just", "should", "now"
+        }
+
         vectors = []
+        import re
         for text in texts:
             vec = [0.0] * self.dimension
-            words = text.lower().split()
-            for idx, word in enumerate(words):
-                h = int(hashlib.md5(word.encode()).hexdigest(), 16)
-                pos = h % self.dimension
-                vec[pos] += 1.0 / (idx + 1)
+            tokens = [w for w in re.findall(r"[a-zA-Z0-9_\-]+", text.lower()) if len(w) > 1]
+            if not tokens:
+                vectors.append(vec)
+                continue
+
+            # Unigram term frequencies with signed hashing
+            tf_counts: dict[str, int] = {}
+            for t in tokens:
+                tf_counts[t] = tf_counts.get(t, 0) + 1
+
+            for token, tf in tf_counts.items():
+                base_w = 0.25 if token in stopwords else 1.0
+                weight = base_w * (1.0 + math.log(tf))
+                pos = int(hashlib.md5(token.encode()).hexdigest(), 16) % self.dimension
+                sign = 1.0 if (int(hashlib.sha1(token.encode()).hexdigest(), 16) & 1) == 0 else -1.0
+                vec[pos] += sign * weight
+
+            # Bigram feature hashing for engineering phrases (e.g. "can-fd", "sender-receiver")
+            for i in range(len(tokens) - 1):
+                t1, t2 = tokens[i], tokens[i + 1]
+                if t1 not in stopwords or t2 not in stopwords:
+                    bigram = f"{t1}_{t2}"
+                    pos_bi = int(hashlib.md5(bigram.encode()).hexdigest(), 16) % self.dimension
+                    sign_bi = 1.0 if (int(hashlib.sha1(bigram.encode()).hexdigest(), 16) & 1) == 0 else -1.0
+                    vec[pos_bi] += sign_bi * 0.85
+
             norm = math.sqrt(sum(v * v for v in vec))
             if norm > 0:
-                vec = [v / norm for v in vec]
+                vec = [round(v / norm, 6) for v in vec]
             vectors.append(vec)
         return vectors
 

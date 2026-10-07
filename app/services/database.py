@@ -66,8 +66,68 @@ class DatabaseManager:
                     relevance REAL NOT NULL,
                     FOREIGN KEY (query_id) REFERENCES queries (id) ON DELETE CASCADE
                 );
+
+                CREATE TABLE IF NOT EXISTS reviews (
+                    finding_id TEXT PRIMARY KEY,
+                    rule_id TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    entity_affected TEXT NOT NULL,
+                    page_number INTEGER NOT NULL,
+                    section TEXT,
+                    snippet TEXT,
+                    suggested_action TEXT,
+                    review_status TEXT DEFAULT 'PENDING',
+                    engineer_comments TEXT DEFAULT '',
+                    reviewed_by TEXT,
+                    reviewed_at TEXT
+                );
             """)
             logger.info("SQLite database tables verified successfully.")
+
+    # ------------------ Review Operations ------------------ #
+    def save_review_record(self, record: Dict[str, Any]) -> None:
+        with self.get_connection() as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO reviews 
+                (finding_id, rule_id, severity, category, title, description, entity_affected, page_number, section, snippet, suggested_action, review_status, engineer_comments, reviewed_by, reviewed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                record["finding_id"], record["rule_id"], record["severity"], record["category"],
+                record["title"], record["description"], record["entity_affected"], record.get("page_number", 1),
+                record.get("section", "General"), record.get("snippet", ""), record.get("suggested_action", ""),
+                record.get("review_status", "PENDING"), record.get("engineer_comments", ""),
+                record.get("reviewed_by"), record.get("reviewed_at")
+            ))
+
+    def update_review(self, finding_id: str, status: str, comments: str, reviewed_by: str, reviewed_at: str, edited_action: Optional[str] = None) -> bool:
+        with self.get_connection() as conn:
+            if edited_action:
+                conn.execute("""
+                    UPDATE reviews 
+                    SET review_status = ?, engineer_comments = ?, reviewed_by = ?, reviewed_at = ?, suggested_action = ?
+                    WHERE finding_id = ?
+                """, (status, comments, reviewed_by, reviewed_at, edited_action, finding_id))
+            else:
+                conn.execute("""
+                    UPDATE reviews 
+                    SET review_status = ?, engineer_comments = ?, reviewed_by = ?, reviewed_at = ?
+                    WHERE finding_id = ?
+                """, (status, comments, reviewed_by, reviewed_at, finding_id))
+            return True
+
+    def list_reviews(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.execute("SELECT * FROM reviews ORDER BY severity DESC, finding_id ASC")
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_review(self, finding_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.execute("SELECT * FROM reviews WHERE finding_id = ?", (finding_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
 
     # ------------------ Document Operations ------------------ #
     def save_document(self, doc: DocumentMetadata) -> None:

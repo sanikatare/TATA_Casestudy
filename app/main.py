@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, status
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.config import settings
 from app.utils.logging import logger
@@ -19,11 +19,19 @@ from app.models.document import (
 )
 from app.models.query import QueryRequest, QueryResponse
 from app.models.evaluation import BenchmarkSummary
+from app.models.architecture import ArchitectureModel
+from app.models.findings import ArchitectureFinding, ReviewUpdateRequest, ReviewSummary
 from app.services.database import db
 from app.services.vector_store import vector_store
 from app.ingestion.service import ingestion_service
 from app.rag.pipeline import rag_pipeline
 from app.evaluation.benchmark import evaluator
+from app.services.architecture import architecture_service
+from app.services.search import search_service, SemanticSearchRequest, SemanticSearchResponse
+from app.services.comparison import comparison_service, DocumentComparisonRequest, DocumentComparisonResponse
+from app.services.consistency import consistency_engine
+from app.services.review import review_service
+from app.services.export import export_service
 
 
 @asynccontextmanager
@@ -244,6 +252,98 @@ def get_architecture_candidates(document_id: Optional[str] = None):
             {"channel": "CAN-FD 0", "bitrate_nominal": "500 kbps", "bitrate_data": "2.0 Mbps", "payload": "64 bytes", "ecu": "Central Gateway"}
         ]
     }
+
+
+@app.get("/analysis/architecture", response_model=ArchitectureModel)
+def get_architecture_model(document_id: Optional[str] = None):
+    """
+    Extracts complete AUTOSAR architecture model with page, section, and snippet
+    evidence for SW-Cs, Ports, Interfaces, Signals, Dependencies, Flows, and Bus Matrix.
+    """
+    return architecture_service.analyze_document(document_id)
+
+
+# ------------------ Semantic Search Endpoints ------------------ #
+@app.post("/search/semantic", response_model=SemanticSearchResponse)
+def semantic_search(request: SemanticSearchRequest):
+    """
+    Dedicated semantic search endpoint returning top-k relevant chunks,
+    similarity scores, document names, page numbers, sections, and source snippets.
+    """
+    return search_service.search(request)
+
+
+@app.get("/search/semantic", response_model=SemanticSearchResponse)
+def semantic_search_get(q: str, document_id: Optional[str] = None, top_k: int = 5):
+    """GET convenience method for semantic search."""
+    req = SemanticSearchRequest(query=q, document_id=document_id, top_k=top_k)
+    return search_service.search(req)
+
+
+# ------------------ Document Comparison Endpoints ------------------ #
+@app.post("/documents/compare", response_model=DocumentComparisonResponse)
+def compare_documents(request: DocumentComparisonRequest):
+    """
+    Compares two HLD specifications and reports added, removed, and modified
+    sections, SW-Cs, RTE interfaces, and bus matrices.
+    """
+    return comparison_service.compare_documents(request.document_id_a, request.document_id_b)
+
+
+# ------------------ Consistency & Completeness Endpoints ------------------ #
+@app.get("/analysis/consistency", response_model=List[ArchitectureFinding])
+def get_consistency_findings(document_id: Optional[str] = None):
+    """
+    Executes consistency & completeness checks. Returns findings with severity,
+    rule IDs, source evidence, and engineering suggestions.
+    """
+    return consistency_engine.run_checks(document_id)
+
+
+# ------------------ Human Review Endpoints ------------------ #
+@app.get("/reviews", response_model=List[ArchitectureFinding])
+def list_reviews(document_id: Optional[str] = None):
+    """Lists architecture findings with their persistent human review status."""
+    return review_service.get_findings_with_reviews(document_id)
+
+
+@app.post("/reviews/{finding_id}", response_model=Optional[ArchitectureFinding])
+def update_review(finding_id: str, request: ReviewUpdateRequest):
+    """
+    Records an engineer review decision (ACCEPTED, REJECTED, EDITED)
+    with comments and persists into SQLite.
+    """
+    updated = review_service.submit_review(finding_id, request)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Finding '{finding_id}' not found.")
+    return updated
+
+
+@app.get("/reviews/summary", response_model=ReviewSummary)
+def get_review_summary(document_id: Optional[str] = None):
+    """Returns aggregated counts of findings and review decisions."""
+    return review_service.get_review_summary(document_id)
+
+
+# ------------------ Export Endpoints ------------------ #
+@app.get("/export/architecture")
+def export_architecture(document_id: Optional[str] = None, format: str = "json"):
+    """Exports architecture entities as JSON or CSV."""
+    if format.lower() == "csv":
+        csv_data = export_service.export_architecture_csv(document_id)
+        return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=autosar_architecture.csv"})
+    json_data = export_service.export_architecture_json(document_id)
+    return Response(content=json_data, media_type="application/json", headers={"Content-Disposition": "attachment; filename=autosar_architecture.json"})
+
+
+@app.get("/export/findings")
+def export_findings(document_id: Optional[str] = None, format: str = "json"):
+    """Exports consistency findings and review audit trails as JSON or CSV."""
+    if format.lower() == "csv":
+        csv_data = export_service.export_findings_csv(document_id)
+        return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=autosar_findings_review.csv"})
+    json_data = export_service.export_findings_json(document_id)
+    return Response(content=json_data, media_type="application/json", headers={"Content-Disposition": "attachment; filename=autosar_findings_review.json"})
 
 
 # ------------------ Benchmark & Evaluation Endpoints ------------------ #

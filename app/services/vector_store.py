@@ -91,10 +91,14 @@ class VectorStoreManager:
 
         if self.collection:
             try:
+                cnt = self.collection.count()
+                if cnt == 0:
+                    return []
+                effective_k = min(top_k, cnt)
                 where_filter = {"document_id": document_id} if document_id else None
                 results = self.collection.query(
                     query_embeddings=[query_vec],
-                    n_results=top_k,
+                    n_results=effective_k,
                     where=where_filter
                 )
                 formatted = []
@@ -103,13 +107,14 @@ class VectorStoreManager:
                         cid = results["ids"][0][i]
                         text = results["documents"][0][i]
                         meta = results["metadatas"][0][i]
-                        dist = results["distances"][0][i] if "distances" in results and results["distances"] else 0.1
-                        sim = max(0.0, min(1.0, 1.0 - dist))
+                        dist = results["distances"][0][i] if ("distances" in results and results["distances"]) else 0.5
+                        # Chroma cosine space: distance = 1 - cosine_similarity
+                        sim = float(max(0.0, min(1.0, 1.0 - dist)))
                         formatted.append({
                             "id": cid,
                             "text": text,
                             "metadata": meta,
-                            "similarity": float(sim)
+                            "similarity": round(sim, 4)
                         })
                 return formatted
             except Exception as e:
@@ -124,18 +129,18 @@ class VectorStoreManager:
             return []
 
         scored = []
+        norm_q = math.sqrt(sum(a * a for a in query_vec)) or 1.0
         for c in candidates:
             c_emb = c["embedding"]
             dot = sum(a * b for a, b in zip(query_vec, c_emb))
-            norm_q = math.sqrt(sum(a * a for a in query_vec))
-            norm_c = math.sqrt(sum(b * b for b in c_emb))
+            norm_c = math.sqrt(sum(b * b for b in c_emb)) or 1.0
             cosine = dot / (norm_q * norm_c + 1e-9)
-            sim = float(max(0.0, min(1.0, (cosine + 1.0) / 2.0)))
+            sim = float(max(0.0, min(1.0, cosine)))
             scored.append({
                 "id": c["id"],
                 "text": c["text"],
                 "metadata": c["metadata"],
-                "similarity": sim
+                "similarity": round(sim, 4)
             })
 
         scored.sort(key=lambda x: x["similarity"], reverse=True)
