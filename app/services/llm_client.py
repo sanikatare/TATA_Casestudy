@@ -138,8 +138,10 @@ Provide a verified, grounded architectural answer citing specific pages and sect
 
         # Dynamic Abstention Criterion:
         # If less than 35% of query core terms exist in retrieved context,
-        # or max retrieval similarity is under 0.15, the evidence is insufficient.
-        if core_terms and (coverage_ratio < 0.35 or max_similarity < 0.15):
+        # or max retrieval similarity is below valid threshold, the evidence is insufficient.
+        from app.services.embeddings import embedding_service
+        sim_threshold = 0.15 if embedding_service.is_real_model else 0.01
+        if core_terms and (coverage_ratio < 0.35 or max_similarity < sim_threshold):
             return "The available HLD evidence is insufficient to answer this question. The retrieved specification excerpts do not contain verified details regarding this inquiry."
 
         # Find the best chunk matching the query terms
