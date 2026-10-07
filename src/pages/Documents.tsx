@@ -41,13 +41,15 @@ export const DocumentsPage: React.FC = () => {
   };
 
   const handleDelete = async (docId: string) => {
-    if (confirm('Are you sure you want to remove this specification and its vector index?')) {
-      await deleteDocument(docId);
-      setDocuments((prev) => prev.filter(d => d.id !== docId));
-      setErrorMsg(null);
-      if (selectedDoc?.id === docId) {
-        setSelectedDoc(null);
-        setShowDetailModal(false);
+    try {
+      if (confirm('Are you sure you want to remove this specification and its vector index?')) {
+        await deleteDocument(docId);
+        setDocuments((prev) => prev.filter(d => d.id !== docId));
+        setErrorMsg(null);
+        if (selectedDoc?.id === docId) {
+          setSelectedDoc(null);
+          setShowDetailModal(false);
+        }
       }
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Unable to delete document.');

@@ -71,11 +71,13 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
               </td>
 
               <td className="py-3 px-4 text-slate-500 text-[11px]">
-                {new Date(doc.uploaded_at).toLocaleDateString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric'
-                })}
+                {doc.uploaded_at
+                  ? new Date(doc.uploaded_at).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  : '-'}
               </td>
 
               <td className="py-3 px-4">
