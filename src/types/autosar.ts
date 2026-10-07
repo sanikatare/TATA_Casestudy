@@ -1,12 +1,12 @@
 export interface DocumentItem {
   id: string;
   filename: string;
-  version: string;
+  version?: string;
   file_size_bytes: number;
   page_count: number;
   chunk_count: number;
   processing_status: 'INDEXED' | 'PROCESSING' | 'PENDING' | 'FAILED';
-  uploaded_at: string;
+  uploaded_at?: string;
   ecu_domain?: string;
   standard?: string;
 }
@@ -45,7 +45,7 @@ export interface QueryRecord {
   document_id?: string;
   document_name: string;
   timestamp: string;
-  status: 'SUCCESS' | 'NO_GROUNDING' | 'FAILED';
+  status: 'SUCCESS' | 'NO_GROUNDING' | 'ABSTAINED' | 'FAILED';
   confidence_score: number;
   citations: Citation[];
 }

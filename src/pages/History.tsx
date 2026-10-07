@@ -9,11 +9,17 @@ export const HistoryPage: React.FC = () => {
   const [historyItems, setHistoryItems] = useState<QueryRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<QueryRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const records = await getHistory();
-      setHistoryItems(records);
+      try {
+        const records = await getHistory();
+        setHistoryItems(records);
+        setErrorMsg(null);
+      } catch (e) {
+        setErrorMsg(e instanceof Error ? e.message : 'Unable to load query history.');
+      }
     }
     load();
   }, []);
@@ -48,6 +54,12 @@ export const HistoryPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
+          {errorMsg}
+        </div>
+      )}
 
       {/* History Table */}
       <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white shadow-2xs">

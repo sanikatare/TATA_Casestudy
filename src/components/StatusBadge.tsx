@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StatusBadgeProps {
-  status: 'OPERATIONAL' | 'ONLINE' | 'CONNECTED' | 'HEALTHY' | 'INDEXED' | 'SUCCESS' | 'DEGRADED' | 'PROCESSING' | 'PENDING' | 'FAILED' | 'OFFLINE' | 'NO_GROUNDING';
+  status: 'OPERATIONAL' | 'ONLINE' | 'CONNECTED' | 'HEALTHY' | 'INDEXED' | 'SUCCESS' | 'DEGRADED' | 'PROCESSING' | 'PENDING' | 'FAILED' | 'OFFLINE' | 'NO_GROUNDING' | 'ABSTAINED';
   label?: string;
   size?: 'sm' | 'md';
 }
@@ -16,7 +16,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 
   if (['OPERATIONAL', 'ONLINE', 'CONNECTED', 'HEALTHY', 'INDEXED', 'SUCCESS'].includes(norm)) {
     dotColor = 'bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)]';
     textColor = 'text-blue-700';
-  } else if (['DEGRADED', 'PROCESSING', 'PENDING', 'NO_GROUNDING'].includes(norm)) {
+  } else if (['DEGRADED', 'PROCESSING', 'PENDING', 'NO_GROUNDING', 'ABSTAINED'].includes(norm)) {
     dotColor = 'bg-sky-400';
     textColor = 'text-sky-700';
   } else if (['FAILED', 'OFFLINE'].includes(norm)) {
