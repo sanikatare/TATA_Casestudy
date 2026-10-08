@@ -7,7 +7,8 @@ import {
   ChevronRight,
   Loader2,
   Bot,
-  RotateCcw
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 import { ChatMessage } from '../components/ChatMessage';
 import { getDocuments, queryHLD, getHistory } from '../services/api';
@@ -64,24 +65,27 @@ export const HLDAssistantPage: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<QueryRecord[]>([]);
   const [questionInput, setQuestionInput] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [queryError, setQueryError] = useState<string | null>(null);
   const [activeExplorerTab, setActiveExplorerTab] = useState<'components' | 'interfaces' | 'ports' | 'signals' | 'dependencies'>('components');
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function init() {
+      setBackendError(null);
       try {
-        const [docs, history] = await Promise.all([getDocuments(), getHistory()]);
+        const docs = await getDocuments();
         setDocuments(docs);
-        setChatHistory(history);
+
         const targetId = (location.state as any)?.targetDocId;
         const initialTarget = docs.find(d => d.id === targetId) || docs[0] || null;
         setSelectedDoc(initialTarget);
-        setLoadError(null);
-      } catch (e) {
-        setLoadError(e instanceof Error ? e.message : 'Unable to connect to backend services.');
+
+        const history = await getHistory();
+        setChatHistory(history);
+      } catch (e: any) {
+        console.error('Initialization failed', e);
+        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
       }
     }
     init();
@@ -111,18 +115,31 @@ export const HLDAssistantPage: React.FC = () => {
 
     setIsSubmitting(true);
     setQuestionInput('');
+    setBackendError(null);
 
     try {
-      setQueryError(null);
       const record = await queryHLD({
         question: q,
         document_id: selectedDoc?.id,
         top_k: 5
       });
       setChatHistory((prev) => [record, ...prev]);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Query execution failed', e);
-      setQueryError(e instanceof Error ? e.message : 'Query failed.');
+      const errMsg = e?.message || 'Failed to query FastAPI backend';
+      setBackendError(errMsg);
+      const errorRecord: QueryRecord = {
+        id: `err-${Date.now()}`,
+        question: q,
+        answer: `Backend Error: ${errMsg}`,
+        document_id: selectedDoc?.id,
+        document_name: selectedDoc?.filename || 'FastAPI Backend',
+        timestamp: new Date().toISOString(),
+        status: 'FAILED',
+        confidence_score: 0.0,
+        citations: []
+      };
+      setChatHistory((prev) => [errorRecord, ...prev]);
     } finally {
       setIsSubmitting(false);
     }
@@ -134,13 +151,25 @@ export const HLDAssistantPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-7.5rem)] min-h-[550px] space-y-4">
-      {/* Top Controls - Blue & White */}
-      {loadError && (
-        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-          {loadError}
+      {/* Backend Connection Error Banner */}
+      {backendError && (
+        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#1e40af] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs shrink-0">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
+            <div>
+              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1 bg-[#1e40af] text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors shrink-0 cursor-pointer"
+          >
+            Retry Connection
+          </button>
         </div>
       )}
 
+      {/* Top Controls - Blue & White */}
       <div className="p-4 rounded-xl bg-white border border-blue-100/90 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-blue-600 text-white shadow-xs shadow-blue-500/20">
@@ -165,12 +194,6 @@ export const HLDAssistantPage: React.FC = () => {
             </select>
           </div>
         </div>
-
-        {queryError && (
-          <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-            {queryError}
-          </div>
-        )}
 
         <div className="flex items-center gap-3 text-xs text-blue-950 font-medium">
           <span>{selectedDoc?.standard || 'AUTOSAR Classic 4.4'}</span>

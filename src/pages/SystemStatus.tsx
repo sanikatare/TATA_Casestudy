@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, HardDrive, Database, Server, Activity } from 'lucide-react';
+import { RefreshCw, HardDrive, Database, Server, Activity, AlertCircle } from 'lucide-react';
 import { SystemStatusCard } from '../components/SystemStatusCard';
 import { MetricCard } from '../components/MetricCard';
 import { getSystemStatus } from '../services/api';
@@ -14,18 +14,21 @@ export const SystemStatusPage: React.FC = () => {
     uptime: "99.98%"
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     setIsRefreshing(true);
+    setBackendError(null);
     try {
       const res = await getSystemStatus();
       setComponents(res.components);
       setStats(res.stats);
-      setErrorMsg(null);
-    } catch (e) {
+      if (res.stats.uptime.includes('Unavailable')) {
+        setBackendError('FastAPI backend is currently unavailable. Ensure uvicorn is running.');
+      }
+    } catch (e: any) {
       console.error('System status query failed', e);
-      setErrorMsg(e instanceof Error ? e.message : 'Unable to load system status.');
+      setBackendError(e?.message || 'Cannot connect to FastAPI backend');
     } finally {
       setIsRefreshing(false);
     }
@@ -37,6 +40,24 @@ export const SystemStatusPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Backend Connection Error Banner */}
+      {backendError && (
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#1e40af] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
+            <div>
+              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+            </div>
+          </div>
+          <button
+            onClick={fetchStatus}
+            className="px-3 py-1.5 bg-[#1e40af] text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors shrink-0 cursor-pointer"
+          >
+            Retry Diagnostics
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-blue-100/90">
         <div>
@@ -57,12 +78,6 @@ export const SystemStatusPage: React.FC = () => {
           <span>Refresh</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-          {errorMsg}
-        </div>
-      )}
 
       {/* KPI Cards - Blue & White */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

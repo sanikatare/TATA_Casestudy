@@ -1,5 +1,8 @@
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+try:
+    from pydantic import BaseModel, Field
+except ImportError:
+    from app.models.document import BaseModel, Field
 from app.models.architecture import SourceEvidence
 
 

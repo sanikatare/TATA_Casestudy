@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, X, Filter } from 'lucide-react';
+import { FileText, X, Filter, AlertCircle } from 'lucide-react';
 import { UploadZone } from '../components/UploadZone';
 import { DocumentTable } from '../components/DocumentTable';
 import { StatusBadge } from '../components/StatusBadge';
@@ -17,17 +17,17 @@ export const DocumentsPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [chunkModalDoc, setChunkModalDoc] = useState<DocumentItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDocs() {
+      setBackendError(null);
       try {
         const list = await getDocuments();
         setDocuments(list);
-        setErrorMsg(null);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Document load error', e);
-        setErrorMsg(e instanceof Error ? e.message : 'Unable to load documents from backend.');
+        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
       } finally {
         setLoading(false);
       }
@@ -37,22 +37,20 @@ export const DocumentsPage: React.FC = () => {
 
   const handleUploadSuccess = (newDoc: DocumentItem) => {
     setDocuments((prev) => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
-    setErrorMsg(null);
   };
 
   const handleDelete = async (docId: string) => {
-    try {
-      if (confirm('Are you sure you want to remove this specification and its vector index?')) {
+    if (confirm('Are you sure you want to remove this specification and its vector index?')) {
+      try {
         await deleteDocument(docId);
         setDocuments((prev) => prev.filter(d => d.id !== docId));
-        setErrorMsg(null);
         if (selectedDoc?.id === docId) {
           setSelectedDoc(null);
           setShowDetailModal(false);
         }
+      } catch (e: any) {
+        setBackendError(e?.message || 'Failed to delete document');
       }
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Unable to delete document.');
     }
   };
 
@@ -102,13 +100,25 @@ export const DocumentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Upload Area */}
-      {errorMsg && (
-        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-          {errorMsg}
+      {/* Backend Connection Error Banner */}
+      {backendError && (
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#1e40af] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
+            <div>
+              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1.5 bg-[#1e40af] text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors shrink-0 cursor-pointer"
+          >
+            Retry Connection
+          </button>
         </div>
       )}
 
+      {/* Upload Area */}
       <UploadZone
         onUploadSuccess={handleUploadSuccess}
         onUploadFile={uploadDocument}

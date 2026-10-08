@@ -1,13 +1,13 @@
 import React from 'react';
 
 interface StatusBadgeProps {
-  status: 'OPERATIONAL' | 'ONLINE' | 'CONNECTED' | 'HEALTHY' | 'INDEXED' | 'SUCCESS' | 'DEGRADED' | 'PROCESSING' | 'PENDING' | 'FAILED' | 'OFFLINE' | 'NO_GROUNDING' | 'ABSTAINED';
+  status: 'OPERATIONAL' | 'ONLINE' | 'CONNECTED' | 'HEALTHY' | 'INDEXED' | 'SUCCESS' | 'DEGRADED' | 'PROCESSING' | 'PENDING' | 'FAILED' | 'OFFLINE' | 'NO_GROUNDING' | 'ABSTAINED' | string;
   label?: string;
   size?: 'sm' | 'md';
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 'sm' }) => {
-  const norm = status.toUpperCase();
+  const norm = (status || '').toUpperCase();
 
   // Strict Blue & White Palette
   let dotColor = 'bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.4)]';

@@ -9,7 +9,8 @@ import {
   ArrowRight,
   TrendingUp,
   Activity,
-  Upload
+  Upload,
+  AlertCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,10 +47,11 @@ export const Dashboard: React.FC = () => {
   const [queries, setQueries] = useState<QueryRecord[]>([]);
   const [pipeline, setPipeline] = useState<PipelineComponentStatus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
+      setBackendError(null);
       try {
         const [docs, hist, sys] = await Promise.all([
           getDocuments(),
@@ -59,10 +61,9 @@ export const Dashboard: React.FC = () => {
         setDocuments(docs);
         setQueries(hist);
         setPipeline(sys.components);
-        setErrorMsg(null);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to load dashboard data', e);
-        setErrorMsg(e instanceof Error ? e.message : 'Unable to load dashboard data from backend.');
+        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
       } finally {
         setLoading(false);
       }
@@ -74,13 +75,25 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Banner - Exceptional Blue & White Theme */}
-      {errorMsg && (
-        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-          {errorMsg}
+      {/* Backend Connection Error Banner */}
+      {backendError && (
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#1e40af] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
+            <div>
+              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1.5 bg-[#1e40af] text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors shrink-0 cursor-pointer"
+          >
+            Retry Connection
+          </button>
         </div>
       )}
 
+      {/* Hero Banner - Exceptional Blue & White Theme */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 text-white border border-blue-900 shadow-sm">
         <div className="absolute inset-0">
           <img

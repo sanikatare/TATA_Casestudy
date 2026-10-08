@@ -15,10 +15,27 @@ except ImportError:
                 setattr(self, k, v)
 
         def dict(self):
-            return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+            def _serialize(obj):
+                if hasattr(obj, "dict") and callable(obj.dict):
+                    return obj.dict()
+                elif isinstance(obj, list):
+                    return [_serialize(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {k: _serialize(v) for k, v in obj.items()}
+                return obj
+
+            return {
+                k: _serialize(v)
+                for k, v in self.__dict__.items()
+                if not k.startswith("_")
+            }
 
         def model_dump(self):
             return self.dict()
+
+        def model_dump_json(self, indent=None):
+            import json
+            return json.dumps(self.dict(), indent=indent)
 
     def Field(default=None, **kwargs):
         if "default_factory" in kwargs:

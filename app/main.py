@@ -32,7 +32,6 @@ from app.services.comparison import comparison_service, DocumentComparisonReques
 from app.services.consistency import consistency_engine
 from app.services.review import review_service
 from app.services.export import export_service
-from app.services.embeddings import embedding_service, EmbeddingModelUnavailableError
 
 
 @asynccontextmanager
@@ -109,14 +108,6 @@ async def corrupted_pdf_handler(request: Request, exc: CorruptedPDFError):
     )
 
 
-@app.exception_handler(EmbeddingModelUnavailableError)
-async def embedding_model_unavailable_handler(request: Request, exc: EmbeddingModelUnavailableError):
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"error": "EmbeddingModelUnavailableError", "message": str(exc)}
-    )
-
-
 @app.get("/")
 def get_root():
     """Root entrypoint providing service health and documentation links."""
@@ -133,15 +124,44 @@ def get_root():
 @app.get("/health")
 def get_health():
     """System health check and diagnostic connectivity."""
-    health_status = "healthy" if embedding_service.is_real_model else "degraded"
+    from app.services.embeddings import embedding_service
+    from app.services.llm_client import llm_client
+    
+    bge_ok = embedding_service.is_real_model
+    gemini_ok = llm_client.is_real_llm
+    chroma_ok = (vector_store.client is not None)
+    
+    degraded_reasons = []
+    if not bge_ok:
+        degraded_reasons.append(f"BGE model '{settings.EMBEDDING_MODEL_NAME}' unavailable: using deterministic fallback engine")
+    if not chroma_ok:
+        degraded_reasons.append("ChromaDB unavailable: using in-memory vector store")
+    if not gemini_ok:
+        degraded_reasons.append("Gemini LLM unavailable: using local grounded synthesizer fallback")
+    
+    is_healthy = bge_ok and gemini_ok and chroma_ok
+    model_display = (
+        settings.EMBEDDING_MODEL_NAME
+        if bge_ok
+        else f"{settings.EMBEDDING_MODEL_NAME} [UNAVAILABLE: Fallback active]"
+    )
+    llm_display = (
+        f"Google Gemini ({llm_client.model_name})"
+        if gemini_ok
+        else "Local Grounded Synthesizer [Degraded: Gemini Unavailable]"
+    )
+    
     return {
-        "status": health_status,
+        "status": "healthy" if is_healthy else "degraded",
         "database": "SQLite Connected",
-        "vector_store": "ChromaDB Ready",
-        "embedding_model": settings.EMBEDDING_MODEL_NAME,
-        "embedding_model_loaded": embedding_service.is_real_model,
-        "embedding_model_error": embedding_service.load_error,
-        "llm_provider": settings.LLM_PROVIDER
+        "vector_store": "ChromaDB Ready" if chroma_ok else "In-Memory Vector Fallback",
+        "embedding_model": model_display,
+        "embedding_is_real_bge": bge_ok,
+        "embedding_engine": embedding_service.active_engine_name,
+        "embedding_warning": embedding_service.warning_message,
+        "llm_provider": llm_display,
+        "llm_is_real_gemini": gemini_ok,
+        "degraded_reasons": degraded_reasons
     }
 
 

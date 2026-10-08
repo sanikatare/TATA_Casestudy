@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, AlertCircle } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
 import { SourceCitation } from '../components/SourceCitation';
 import { getHistory } from '../services/api';
@@ -9,16 +9,17 @@ export const HistoryPage: React.FC = () => {
   const [historyItems, setHistoryItems] = useState<QueryRecord[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<QueryRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      setBackendError(null);
       try {
         const records = await getHistory();
         setHistoryItems(records);
-        setErrorMsg(null);
-      } catch (e) {
-        setErrorMsg(e instanceof Error ? e.message : 'Unable to load query history.');
+      } catch (e: any) {
+        console.error('Failed to load history', e);
+        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
       }
     }
     load();
@@ -31,6 +32,24 @@ export const HistoryPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Backend Connection Error Banner */}
+      {backendError && (
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#1e40af] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
+            <div>
+              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1.5 bg-[#1e40af] text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors shrink-0 cursor-pointer"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-blue-100/90">
         <div>
@@ -54,12 +73,6 @@ export const HistoryPage: React.FC = () => {
           />
         </div>
       </div>
-
-      {errorMsg && (
-        <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 font-semibold">
-          {errorMsg}
-        </div>
-      )}
 
       {/* History Table */}
       <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white shadow-2xs">

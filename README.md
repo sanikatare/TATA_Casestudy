@@ -22,7 +22,7 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 3. **High-Precision Embeddings & Vector Search**: Use domain-proven models (BGE / E5) with ChromaDB for dense retrieval.
 4. **Strictly Grounded RAG Pipeline**: Synthesize answers solely from retrieved evidence, explicitly denying unsubstantiated claims.
 5. **Direct Source Traceability**: Provide explicit citations (Document, Page Number, Section, Relevant Chunk) for every generated answer.
-6. **Local Execution Support**: Support local native execution for backend and frontend services.
+6. **Dual Execution Support**: Support local native execution and containerized execution via Docker Compose.
 7. **Explainable Architecture**: Built cleanly for individual academic defense and viva presentations.
 
 ---
@@ -30,8 +30,8 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 ## 4. System Architecture
 ```
                          +-----------------------------+
-                         | React + Vite Frontend UI    |
-                         |        (Port 3000)          |
+                         |  React + Vite Engineer UI   |
+                         |     (Port 3000 / Web SPA)   |
                          +--------------+--------------+
                                         | HTTP / JSON
                                         v
@@ -65,13 +65,13 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 
 ## 5. Technology Stack
 - **Backend**: Python 3.10+, FastAPI, Uvicorn, Pydantic v2
-- **Frontend**: React 19 + Vite + TypeScript
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS (AUTOSAR Engineering Studio)
 - **Database**: SQLite (structured metadata, query logs, citation trails)
 - **Vector Storage**: ChromaDB (persistent local vector store)
-- **Embeddings**: BAAI/bge-small-en-v1.5 (SentenceTransformers)
-- **Document Parser**: PyMuPDF (`fitz`)
+- **Embeddings**: BAAI/bge-small-en-v1.5 / intfloat/e5-small-v2
+- **Document Parser**: PyMuPDF (`fitz`) / pdfplumber
 - **Testing**: pytest, pytest-asyncio, HTTPX
-- **Orchestration**: Local FastAPI + Vite development servers
+- **Orchestration**: Docker, Docker Compose
 
 ---
 
@@ -79,34 +79,39 @@ Engineers spend extensive hours manually tracing dependencies, verifying compone
 ```
 project-root/
 │
-├── app/                            # FastAPI backend (routes, RAG, ingestion, services)
-│   ├── main.py
-│   ├── config.py
-│   ├── ingestion/
-│   ├── rag/
-│   ├── services/
-│   ├── models/
-│   └── utils/
+├── app/
+│   ├── main.py                 # FastAPI application entrypoint & middleware
+│   ├── config.py               # Pydantic environment configuration
+│   ├── models/                 # Pydantic schemas (documents, queries, findings)
+│   ├── ingestion/              # PyMuPDF parser, chunker, ingestion service
+│   ├── rag/                    # Dense retriever & RAG synthesis pipeline
+│   ├── services/               # Vector store, embeddings, SQLite, LLM client
+│   └── evaluation/             # Ground-truth benchmark evaluator
 │
-├── src/                            # React + Vite frontend
-│   ├── pages/
-│   ├── components/
-│   ├── services/api.ts
-│   └── types/
+├── src/
+│   ├── App.tsx                 # React application routes & domain provider
+│   ├── main.tsx                # React DOM entrypoint
+│   ├── components/             # UI components (TopNavbar, ChatMessage, UploadZone, etc.)
+│   ├── pages/                  # Dashboard, Documents, HLDAssistant, Analysis, History, SystemStatus
+│   ├── services/api.ts         # Real FastAPI backend client (supports VITE_BACKEND_URL)
+│   ├── context/                # ECU Domain context
+│   └── types/                  # AUTOSAR TypeScript interfaces
 │
 ├── data/
-│   ├── uploads/                    # Stored PDF documents
-│   ├── chroma/                     # ChromaDB persistent vector collection
-│   └── sqlite/                     # SQLite database files
+│   ├── documents/              # Stored PDF specifications
+│   └── autosar_assistant.db    # SQLite audit database
 │
 ├── tests/
-│   └── test_health.py              # Health check and schema validation tests
+│   ├── test_rag.py             # End-to-end RAG verification (BGE, ChromaDB, threshold, citations, abstention)
+│   ├── test_case_study_1_features.py # Case Study 1 architecture, search, comparison, review, and export
+│   ├── test_chunker.py         # Semantic chunking and overlap preservation
+│   ├── test_ingestion.py       # Document ingestion and page boundary tests
+│   └── test_health.py          # Database, vector store, and embedding health tests
 │
-├── package.json                    # Frontend dependencies and scripts
-├── .env.example                    # Template environment variables
-├── .gitignore                      # Git exclusion rules
-├── requirements.txt                # Unified requirements file
-└── README.md                       # Comprehensive project documentation
+├── .env.example                # Template environment variables
+├── package.json                # Frontend dependencies and Vite scripts
+├── requirements.txt            # Python dependencies
+└── README.md                   # Comprehensive project documentation
 ```
 
 ---
@@ -115,18 +120,19 @@ project-root/
 
 ### Prerequisites
 - Python 3.10 or 3.11
+- Node.js 18+ & npm
 - pip / virtualenv
-- Node.js 20+ and npm
+- Docker & Docker Compose (optional for containerized runs)
 
-### 1. Create Virtual Environment
+### 1. Backend Setup
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### 2. Install Dependencies
+### 2. Frontend Setup
 ```bash
-pip install -r requirements.txt
 npm install
 ```
 
@@ -135,6 +141,7 @@ Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
+Ensure `VITE_BACKEND_URL=http://localhost:8000` is set if connecting across different hosts or ports.
 
 ---
 
@@ -152,14 +159,24 @@ API Documentation will be available at:
 ```bash
 npm run dev
 ```
-Open your browser at `http://localhost:3000`.
+Open your browser at `http://localhost:3000` (or Vite assigned port). The frontend connects directly to the FastAPI backend at `http://localhost:8000`.
 
 ---
 
-## 9. Frontend Backend URL
-Set `VITE_BACKEND_URL` in `.env` if your API is not running at the default endpoint.
+## 9. Running with Docker Compose
+Build and run the entire stack with a single command:
 ```bash
-VITE_BACKEND_URL=http://localhost:8000
+# Build containers
+docker compose build
+
+# Start services in detached mode
+docker compose up -d
+
+# View service logs
+docker compose logs -f
+
+# Stop services
+docker compose down
 ```
 
 ---
@@ -169,15 +186,16 @@ VITE_BACKEND_URL=http://localhost:8000
 | Method | Endpoint | Description | Phase |
 |---|---|---|---|
 | `GET` | `/health` | Core health check returning `{"status": "healthy"}` | Phase 1 |
+| `GET` | `/health/details` | Detailed diagnostic information | Phase 1 |
 | `GET` | `/` | API status and root links | Phase 1 |
 | `GET` | `/documents` | List all ingested AUTOSAR documents | Phase 1 & 2 |
 | `POST`| `/documents/upload`| Upload, validate & extract AUTOSAR HLD PDF with PyMuPDF | Phase 2 |
-| `GET` | `/documents/{id}` | Detailed document metadata | Phase 2 |
+| `POST`| `/documents/sample`| Generate & ingest 4-page sample AUTOSAR HLD spec | Phase 2 |
+| `GET` | `/documents/{id}` | Detailed document metadata, sections & page previews | Phase 2 |
+| `GET` | `/documents/{id}/pages` | Full extracted page texts, boundaries & tables | Phase 2 |
 | `DELETE`| `/documents/{id}` | Remove document, physical files & cached parsing | Phase 2 |
 | `POST`| `/chat/query` | Execute grounded RAG query with citations | Phase 6 |
 | `GET` | `/chat/history` | Retrieve query and citation history | Phase 6 & 7 |
-| `POST` | `/search/semantic` | Retrieve top-k semantic chunks with similarity scores | Phase 6 |
-| `GET` | `/analysis/architecture` | Extract architecture model view | Phase 5 |
 
 ---
 

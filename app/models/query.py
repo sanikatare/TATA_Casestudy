@@ -35,3 +35,5 @@ class QueryResponse(BaseModel):
     confidence_score: float = 0.95
     citations: List[Citation] = []
     rag_trace: Optional[Dict[str, Any]] = None
+    pipeline_mode: str = "REAL_RAG"
+    degraded_warnings: List[str] = []
