@@ -7,11 +7,21 @@ import { AutosarChunk, Citation, QueryRecord } from './types';
  */
 export class RAGPipeline {
   private ai: GoogleGenAI | null = null;
+  private modelName: string;
 
   constructor(apiKey?: string) {
-    if (apiKey) {
-      this.ai = new GoogleGenAI({ apiKey });
+    const key = apiKey || process.env.GEMINI_API_KEY || '';
+    if (key) {
+      this.ai = new GoogleGenAI({
+        apiKey: key,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
     }
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   }
 
   /**
@@ -94,16 +104,18 @@ export class RAGPipeline {
         }
       }
 
-      // 3. Section heading tokens match
+      // 3. Section heading tokens match (whole word)
+      const secWords = new Set(chunkSecLower.split(/[\s,?.!()\-:_"`'#*+=[\]{}]+/));
       for (const token of queryTokens) {
-        if (chunkSecLower.includes(token)) {
+        if (secWords.has(token)) {
           score += 5;
         }
       }
 
-      // 4. Body text token overlap
+      // 4. Body text token overlap (whole word)
+      const bodyWords = new Set(chunkTextLower.split(/[\s,?.!()\-:_"`'#*+=[\]{}]+/));
       for (const token of queryTokens) {
-        if (chunkTextLower.includes(token)) {
+        if (bodyWords.has(token)) {
           score += 2;
         }
       }
@@ -113,7 +125,7 @@ export class RAGPipeline {
 
     scored.sort((a, b) => b.score - a.score);
     return scored
-      .filter((s) => s.score > 0)
+      .filter((s) => s.score >= 5)
       .slice(0, topK)
       .map((s) => s.chunk);
   }
@@ -185,7 +197,7 @@ ${question}
 ANSWER:`;
 
         const response = await this.ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: this.modelName,
           contents: prompt,
         });
 
@@ -199,7 +211,28 @@ ANSWER:`;
       answer = matchedChunks.map((c) => c.text).slice(0, 3).join(' ');
     }
 
-    // 4. Construct verifiable citations
+    // 4. Check if generated or synthesized answer abstains due to lack of evidence
+    const isAbstainedAnswer =
+      answer.toLowerCase().includes('not contain sufficient evidence') ||
+      answer.toLowerCase().includes('not specified in the active') ||
+      answer.toLowerCase().includes('insufficient evidence to substantiate') ||
+      answer.toLowerCase().includes('cannot be substantiated from the provided');
+
+    if (isAbstainedAnswer) {
+      return {
+        id: queryId,
+        question,
+        answer: answer.trim() || 'The ingested specification excerpts do not contain sufficient evidence to substantiate this answer.',
+        document_id: documentId || (matchedChunks[0]?.document_id),
+        document_name: matchedChunks[0]?.document_name || 'AUTOSAR Specification',
+        timestamp,
+        status: 'ABSTAINED',
+        confidence_score: 0.99,
+        citations: [],
+      };
+    }
+
+    // 5. Construct verifiable citations for substantiated answer
     const citations: Citation[] = matchedChunks.map((c, idx) => ({
       document: c.document_name,
       document_id: c.document_id,

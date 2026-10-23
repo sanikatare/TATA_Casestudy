@@ -103,12 +103,14 @@ export const HLDAssistantPage: React.FC = () => {
 
         // Build dependencies from interfaces
         const depList: any[] = ifList
-          .filter((i) => i.consumer_components.length > 0)
-          .map((i) => ({
-            from: i.provider_component,
-            to: i.consumer_components[0],
-            via: i.name,
-          }));
+          .filter((i) => i.consumer_components && i.consumer_components.length > 0)
+          .flatMap((i) =>
+            i.consumer_components.map((consumer: string) => ({
+              from: i.provider_component,
+              to: consumer,
+              via: i.name,
+            }))
+          );
 
         setExplorerData({
           components: compList.map((c) => ({

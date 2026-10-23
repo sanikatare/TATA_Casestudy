@@ -212,20 +212,20 @@ export async function getSystemStatus(): Promise<{
 
   const components: PipelineComponentStatus[] = [
     {
-      name: "FastAPI REST API",
+      name: "Express REST API",
       category: "API",
       status: isHealthy ? "OPERATIONAL" : "OFFLINE",
-      version: "1.0.0",
-      latency_ms: isHealthy ? 6 : 0,
-      target: `${API_BASE_URL} (FastAPI Server)`
+      version: "4.21.2",
+      latency_ms: isHealthy ? 4 : 0,
+      target: `${API_BASE_URL || 'Local Host'} (Express Full-Stack)`
     },
     {
       name: "Document Ingestion Engine",
       category: "STORAGE",
       status: isHealthy ? "OPERATIONAL" : "OFFLINE",
-      version: "PyMuPDF / Native Parser",
-      latency_ms: 12,
-      target: "Page-Preserving PDF Parser"
+      version: "Page-Preserving Parser",
+      latency_ms: 8,
+      target: "Page-Preserving Ingestion Engine"
     },
     {
       name: "Dense Embeddings (BGE)",

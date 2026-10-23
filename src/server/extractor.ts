@@ -8,11 +8,21 @@ import { ArchitectureModel, SoftwareComponent, PortInterface, BusChannel, Source
  */
 export class ArchitectureExtractor {
   private ai: GoogleGenAI | null = null;
+  private modelName: string;
 
   constructor(apiKey?: string) {
-    if (apiKey) {
-      this.ai = new GoogleGenAI({ apiKey });
+    const key = apiKey || process.env.GEMINI_API_KEY || '';
+    if (key) {
+      this.ai = new GoogleGenAI({
+        apiKey: key,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
     }
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   }
 
   /**
@@ -57,6 +67,8 @@ export class ArchitectureExtractor {
     const seenInterfaces = new Set<string>();
     const seenBusChannels = new Set<string>();
 
+    const fullDocumentText = pages.map((p) => p.text || '').join('\n\n');
+
     // Pre-pass: Discover all components defined or referenced in the document
     const allDiscoveredComponents = new Set<string>();
     for (const page of pages) {
@@ -88,74 +100,125 @@ export class ArchitectureExtractor {
         const compMatches = line.matchAll(/\b([A-Z][A-Za-z0-9_]*_(?:SWC|BSW_Module|BSW|Driver|Router|Controller|Module))\b/g);
         for (const match of compMatches) {
           const compName = match[1];
-          if (!seenComponents.has(compName)) {
-            seenComponents.add(compName);
 
-            // Context window: line + 3 following lines
-            const contextSnippet = lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 5)).join(' ');
+          // Skip components explicitly declared as absent or missing
+          const isExplicitlyMissing = new RegExp(`(?:no|missing|unallocated)\\s+${compName}|${compName}\\s+(?:is\\s+not|not\\s+allocated|missing)`, 'i').test(line);
+          if (isExplicitlyMissing) {
+            continue;
+          }
 
-            // Detect Component Type
-            let compType = 'Software Component';
-            if (/Application SW-C/i.test(contextSnippet)) compType = 'Application SW-C';
-            else if (/Service (?:Component|SW-C)/i.test(contextSnippet)) compType = 'Service Component';
-            else if (/Sensor-Actuator (?:SW-C|Component)/i.test(contextSnippet)) compType = 'Sensor-Actuator SW-C';
-            else if (/Diagnostic BSW Module/i.test(contextSnippet) || /Dem/i.test(compName)) compType = 'Diagnostic BSW Module';
-            else if (/Communication Hardware Driver|Comm Driver|CanIf/i.test(contextSnippet)) compType = 'Communication Hardware Driver';
-            else if (/BSW|Basic Software/i.test(contextSnippet)) compType = 'Basic Software (BSW)';
+          // Prioritize exact line metadata over broad context
+          const lineTypeMatch = line.match(/\(([^)]+)\)/);
+          const typeContext = lineTypeMatch ? lineTypeMatch[1] : line;
 
-            // Detect ASIL: ONLY if explicitly specified; do NOT guess
-            let asil: SoftwareComponent['asil_level'] = 'UNKNOWN';
-            const asilMatch = contextSnippet.match(/\b(ASIL-[ABCD]|QM)\b/i);
-            if (asilMatch) {
-              asil = asilMatch[1].toUpperCase() as any;
+          let compType = 'Software Component';
+          if (/Application SW-C/i.test(typeContext)) compType = 'Application SW-C';
+          else if (/Service (?:Component|SW-C)/i.test(typeContext)) compType = 'Service Component';
+          else if (/Sensor-Actuator (?:SW-C|Component)/i.test(typeContext)) compType = 'Sensor-Actuator SW-C';
+          else if (/Diagnostic BSW Module/i.test(typeContext) || /Dem/i.test(compName)) compType = 'Diagnostic BSW Module';
+          else if (/Communication Hardware Driver|Comm Driver|CanIf/i.test(typeContext)) compType = 'Communication Hardware Driver';
+          else if (/BSW|Basic Software/i.test(typeContext)) compType = 'Basic Software (BSW)';
+
+          // Detect ASIL: check line first, then immediate context
+          let asil: SoftwareComponent['asil_level'] = 'UNKNOWN';
+          const asilMatch = line.match(/\b(ASIL-[ABCD]|QM)\b/i) || line.match(/allocated to .*?\b(ASIL-[ABCD]|QM)\b/i);
+          if (asilMatch) {
+            asil = asilMatch[1].toUpperCase() as any;
+          }
+
+          // Detect Periodicity: check line first
+          let periodicity = 'Not specified';
+          const periodMatch = line.match(/\b(\d+\s*ms|Event-driven|cyclic\s+\d+\s*ms)\b/i);
+          if (periodMatch) {
+            periodicity = periodMatch[1].replace(/\s+/g, '');
+          }
+
+          // Detect ECU Allocation
+          let ecu = 'Target ECU';
+          const ecuMatch = line.match(/(?:ECU|Controller|allocation)[:\s]+([A-Za-z0-9\s\-]+?)(?:,|\.|\(|\n|$)/i);
+          if (ecuMatch && ecuMatch[1].trim().length < 30) {
+            ecu = ecuMatch[1].trim();
+          } else if (/Gateway/i.test(compName) || /Central Gateway/i.test(line)) {
+            ecu = 'Central Gateway';
+          } else if (/Powertrain/i.test(compName)) {
+            ecu = 'Powertrain DC';
+          } else if (/Body/i.test(compName)) {
+            ecu = 'Body Controller';
+          } else if (/BMS/i.test(compName)) {
+            ecu = 'BMS Domain Controller';
+          }
+
+          // If component was already recorded, enrich with more specific details if available
+          if (seenComponents.has(compName)) {
+            const existing = components.find((c) => c.name === compName);
+            if (existing) {
+              if (existing.periodicity === 'Not specified' && periodicity !== 'Not specified') {
+                existing.periodicity = periodicity;
+              }
+              if (existing.component_type === 'Software Component' && compType !== 'Software Component') {
+                existing.component_type = compType;
+              }
+              if (existing.asil_level === 'UNKNOWN' && asil !== 'UNKNOWN') {
+                existing.asil_level = asil;
+              }
+              if (existing.ecu_allocation === 'Target ECU' && ecu !== 'Target ECU') {
+                existing.ecu_allocation = ecu;
+              }
             }
+            continue;
+          }
 
-            // Detect Periodicity
-            let periodicity = 'Not specified';
-            const periodMatch = contextSnippet.match(/\b(\d+\s*ms|Event-driven|cyclic\s+\d+\s*ms)\b/i);
-            if (periodMatch) {
-              periodicity = periodMatch[1].replace(/\s+/g, '');
+          seenComponents.add(compName);
+          const contextSnippet = lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 5)).join(' ');
+
+          // If ASIL still unknown, check contextSnippet
+          if (asil === 'UNKNOWN') {
+            const ctxAsil = contextSnippet.match(/\b(ASIL-[ABCD]|QM)\b/i);
+            if (ctxAsil) asil = ctxAsil[1].toUpperCase() as any;
+          }
+
+          // If periodicity still unspecified, check contextSnippet
+          if (periodicity === 'Not specified') {
+            const ctxPeriod = contextSnippet.match(/\b(\d+\s*ms|Event-driven|cyclic\s+\d+\s*ms)\b/i);
+            if (ctxPeriod) periodicity = ctxPeriod[1].replace(/\s+/g, '');
+          }
+
+          // Detect Associated Ports across document
+          const ports: string[] = [];
+          const portRegex = new RegExp(`(?:${compName}[^.]*?\\b(P_[A-Za-z0-9_]+|R_[A-Za-z0-9_]+|PR_[A-Za-z0-9_]+|Pp_[A-Za-z0-9_]+)\\b|\\b(P_[A-Za-z0-9_]+|R_[A-Za-z0-9_]+|PR_[A-Za-z0-9_]+|Pp_[A-Za-z0-9_]+)\\b[^.]*?${compName})`, 'g');
+          const portMatches = fullDocumentText.matchAll(portRegex);
+          for (const pm of portMatches) {
+            const port = pm[1] || pm[2];
+            if (port && !ports.includes(port)) {
+              ports.push(port);
             }
+          }
 
-            // Detect ECU Allocation
-            let ecu = 'Target ECU';
-            const ecuMatch = contextSnippet.match(/(?:ECU|Controller|allocation)[:\s]+([A-Za-z0-9\s\-]+?)(?:,|\.|\(|\n|$)/i);
-            if (ecuMatch && ecuMatch[1].trim().length < 30) {
-              ecu = ecuMatch[1].trim();
-            } else if (/Gateway/i.test(contextSnippet)) {
-              ecu = 'Central Gateway';
-            } else if (/Powertrain/i.test(contextSnippet)) {
-              ecu = 'Powertrain DC';
-            } else if (/Body/i.test(contextSnippet)) {
-              ecu = 'Body Controller';
-            }
-
-            // Detect Associated Ports in document
-            const ports: string[] = [];
-            const portRegex = new RegExp(`(?:${compName}[^.]*?\\b(P_[A-Za-z0-9_]+|R_[A-Za-z0-9_]+|PR_[A-Za-z0-9_]+|Pp_[A-Za-z0-9_]+)\\b|\\b(P_[A-Za-z0-9_]+|R_[A-Za-z0-9_]+|PR_[A-Za-z0-9_]+|Pp_[A-Za-z0-9_]+)\\b[^.]*?${compName})`, 'g');
-            const portMatches = text.matchAll(portRegex);
-            for (const pm of portMatches) {
-              const port = pm[1] || pm[2];
+          // For single-component specifications, associate all declared ports in the document
+          if (allDiscoveredComponents.size <= 1) {
+            const allPortMatches = fullDocumentText.matchAll(/\b(P_[A-Za-z0-9_]+|R_[A-Za-z0-9_]+|PR_[A-Za-z0-9_]+|Pp_[A-Za-z0-9_]+)\b/g);
+            for (const apm of allPortMatches) {
+              const port = apm[1];
               if (port && !ports.includes(port)) {
                 ports.push(port);
               }
             }
-
-            components.push({
-              name: compName,
-              component_type: compType,
-              asil_level: asil,
-              ecu_allocation: ecu,
-              periodicity,
-              ports,
-              description: `Software component '${compName}' identified in section ${currentSection}.`,
-              source_evidence: {
-                page_number: page.page_number,
-                section: currentSection,
-                snippet: contextSnippet.slice(0, 200).trim(),
-              },
-            });
           }
+
+          components.push({
+            name: compName,
+            component_type: compType,
+            asil_level: asil,
+            ecu_allocation: ecu,
+            periodicity,
+            ports,
+            description: `Software component '${compName}' identified in section ${currentSection}.`,
+            source_evidence: {
+              page_number: page.page_number,
+              section: currentSection,
+              snippet: contextSnippet.slice(0, 200).trim(),
+            },
+          });
         }
 
         // --- B. Interface Extraction ---
@@ -368,7 +431,7 @@ DOCUMENT TEXT:
 ${combinedText.slice(0, 15000)}`;
 
     const response = await this.ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: this.modelName,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

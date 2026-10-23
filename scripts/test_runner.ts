@@ -7,6 +7,7 @@ import {
   extractFromText,
   chunkPages,
   validateUpload,
+  detectContentFormat,
   EmptyDocumentError,
   UnsupportedFileTypeError,
 } from '../src/server/ingestion';
@@ -44,6 +45,33 @@ async function runTestSuite() {
   // --------------------------------------------------------------------------
   console.log('[1/6] Running Document Ingestion & Validation Tests...');
 
+  // Helper to create valid minimal PDF buffers for test verification
+  function createMinimalPdfBuffer(text: string): Buffer {
+    const streamContent = `BT\n/F1 12 Tf\n72 712 Td\n(${text}) Tj\nET`;
+    const streamLength = Buffer.byteLength(streamContent);
+
+    const header = `%PDF-1.4\n`;
+    const obj1 = `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`;
+    const obj2 = `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`;
+    const obj3 = `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n`;
+    const obj4 = `4 0 obj\n<< /Length ${streamLength} >>\nstream\n${streamContent}\nendstream\nendobj\n`;
+    const obj5 = `5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`;
+
+    const offset0 = 0;
+    const offset1 = Buffer.byteLength(header);
+    const offset2 = offset1 + Buffer.byteLength(obj1);
+    const offset3 = offset2 + Buffer.byteLength(obj2);
+    const offset4 = offset3 + Buffer.byteLength(obj3);
+    const offset5 = offset4 + Buffer.byteLength(obj4);
+    const xrefOffset = offset5 + Buffer.byteLength(obj5);
+
+    const pad = (n: number) => String(n).padStart(10, '0');
+    const xref = `xref\n0 6\n${pad(offset0)} 65535 f \n${pad(offset1)} 00000 n \n${pad(offset2)} 00000 n \n${pad(offset3)} 00000 n \n${pad(offset4)} 00000 n \n${pad(offset5)} 00000 n \n`;
+    const trailer = `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+
+    return Buffer.from(header + obj1 + obj2 + obj3 + obj4 + obj5 + xref + trailer, 'binary');
+  }
+
   // 1.1 Empty file rejection
   try {
     validateUpload({
@@ -68,14 +96,55 @@ async function runTestSuite() {
     assert(err instanceof UnsupportedFileTypeError, 'Reject unsupported .exe format with UnsupportedFileTypeError');
   }
 
-  // 1.3 Text page extraction with section splitting
+  // 1.3 Content-based format detection: PDF magic bytes vs text vs binary
+  const validPdfBuf = createMinimalPdfBuffer('PowertrainCoordination_SWC ASIL-D');
+  assert(detectContentFormat(validPdfBuf) === 'pdf', 'Detect real PDF via magic bytes %PDF');
+  assert(detectContentFormat(Buffer.from('# Markdown HLD Spec')) === 'text', 'Detect UTF-8 text via content');
+  assert(
+    detectContentFormat(Buffer.from([0x00, 0x01, 0x02, 0xff])) === 'unsupported_binary',
+    'Detect binary file containing null bytes as unsupported_binary'
+  );
+
+  // 1.4 Content-based rejection of disguised binary file (.pdf extension with binary null bytes)
+  try {
+    validateUpload({
+      originalname: 'disguised_executable.pdf',
+      size: 1024,
+      buffer: Buffer.from([0x00, 0x4d, 0x5a, 0x90]), // MZ DOS header with null byte
+    });
+    assert(false, 'Reject disguised binary file with .pdf extension');
+  } catch (err: any) {
+    assert(
+      err instanceof UnsupportedFileTypeError,
+      'Reject disguised binary file (.pdf extension) with UnsupportedFileTypeError via content inspection'
+    );
+  }
+
+  // 1.5 Real binary PDF extraction and page numbering
+  const realPdfExtracted = await extractPages(validPdfBuf, 'genuine_spec.pdf');
+  assert(realPdfExtracted.pages.length === 1, 'Extract genuine binary PDF pages with PDFParse');
+  assert(
+    realPdfExtracted.pages[0].text.includes('PowertrainCoordination_SWC ASIL-D'),
+    'Extract text content accurately from real binary PDF'
+  );
+  assert(realPdfExtracted.pages[0].page_number === 1, 'Real binary PDF page is correctly 1-indexed');
+
+  // 1.6 Real binary PDF with arbitrary or text extension parsed as PDF by content
+  const disguisedPdfAsText = await extractPages(validPdfBuf, 'genuine_spec.txt');
+  assert(disguisedPdfAsText.pages.length === 1, 'Real binary PDF detected and parsed by content even if extension is .txt');
+
+  // 1.7 Text page extraction with section splitting
   const sampleMarkdown = `# Section 1: Overview\nText on page one.\n\n---\n\n# Section 2: Safety\nText on page two.`;
   const { pages: extractedPages } = extractFromText(sampleMarkdown);
   assert(extractedPages.length === 2, 'Extract distinct pages preserving page separators (---)', `Got ${extractedPages.length}`);
   assert(extractedPages[0].page_number === 1 && extractedPages[1].page_number === 2, 'Preserve 1-indexed page boundaries');
 
-  // 1.4 Chunking preserving metadata
-  const sampleChunks = chunkPages(extractedPages, 'test-doc-01', 'Sample_Spec.pdf');
+  // 1.8 Baseline PDF filename with Markdown buffer fallback
+  const simulatedPdfPages = await extractPages(Buffer.from(sampleMarkdown), 'Baseline_Spec.pdf');
+  assert(simulatedPdfPages.pages.length === 2, 'Fallback .pdf named text buffers gracefully to Markdown page extractor');
+
+  // 1.9 Chunking preserving metadata and genuine page numbers
+  const sampleChunks = chunkPages(extractedPages, 'test-doc-01', 'Custom_Spec.pdf');
   assert(sampleChunks.length >= 2, 'Generate semantic chunks from pages', `Got ${sampleChunks.length}`);
   assert(
     sampleChunks.every((c) => c.document_id === 'test-doc-01' && c.page_number > 0 && c.section.length > 0),
@@ -115,6 +184,17 @@ async function runTestSuite() {
   // 2.4 Bus matrix extraction
   const busNames = gwModel.bus_matrix.map((b) => b.channel_name);
   assert(busNames.some((b) => b.includes('CAN-FD')), 'Extract CAN-FD bus channel configuration');
+
+  // 2.5 Single-component specification port association
+  const ptPathForPort = path.resolve(__dirname, '../data/documents/Powertrain_Coordination_SWC_Specification.md');
+  const ptTextForPort = fs.readFileSync(ptPathForPort, 'utf-8');
+  const { pages: ptPagesForPort } = extractFromText(ptTextForPort);
+  const ptModelForPort = extractor.extractDeterministically('doc-pt-port', 'Powertrain_Coordination_SWC_Specification.pdf', ptPagesForPort);
+  const ptSwc = ptModelForPort.components.find((c) => c.name === 'PowertrainCoordination_SWC');
+  assert(
+    ptSwc !== undefined && ptSwc.ports.some((p) => p.includes('TorqueCoordination') || p.includes('BrakePedalTravel')),
+    'Extract declared PPorts and RPorts for PowertrainCoordination_SWC'
+  );
 
   // --------------------------------------------------------------------------
   // TEST SUITE 3: Dynamic Multi-Document Extraction & Cross-Document Isolation
@@ -208,6 +288,18 @@ async function runTestSuite() {
     answerableResp.citations.some((c) => c.page > 0 && c.section.length > 0 && c.snippet.length > 0),
     'Citations provide exact page number, section, and text snippet'
   );
+
+  // 5.4 Unsupported / Out-of-Scope Query returns NO_GROUNDING or ABSTAINED without fabricating citations
+  const unsupportedResp = await rag.executeQuery(
+    'What is the Bluetooth pairing pin for the rear infotainment screen?',
+    gwChunks,
+    'doc-gw'
+  );
+  assert(
+    unsupportedResp.status === 'NO_GROUNDING' || unsupportedResp.status === 'ABSTAINED',
+    'Arbitrary ungrounded query rejects hallucination with NO_GROUNDING or ABSTAINED'
+  );
+  assert(unsupportedResp.citations.length === 0, 'Zero citations returned on ungrounded query');
 
   // --------------------------------------------------------------------------
   // TEST SUITE 6: Academic Benchmark Runner & Ground Truth Evaluation

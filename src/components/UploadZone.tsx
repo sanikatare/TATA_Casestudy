@@ -16,8 +16,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileProcess = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setErrorMsg('Only PDF documents (.pdf) are supported.');
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    const validExtensions = ['.pdf', '.md', '.markdown', '.txt'];
+    if (!validExtensions.includes(ext)) {
+      setErrorMsg('Supported specification formats are PDF (.pdf), Markdown (.md), and Text (.txt).');
       return;
     }
     setErrorMsg(null);
@@ -28,7 +30,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
       setRecentUpload(doc);
       onUploadSuccess(doc);
     } catch (e: any) {
-      setErrorMsg(e.message || 'PDF ingestion failed. Ensure valid document format.');
+      setErrorMsg(e.message || 'Specification ingestion failed. Ensure valid document format.');
     } finally {
       setIsUploading(false);
     }
@@ -68,7 +70,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,.md,.markdown,.txt"
           className="hidden"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
@@ -88,10 +90,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUploadSuccess, onUploa
 
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-blue-950">
-              Upload Specification PDF
+              Upload Specification Document
             </h3>
             <p className="text-xs text-slate-500">
-              Drag and drop file here, or click to browse
+              Drag and drop PDF, Markdown, or Text specification here, or click to browse
             </p>
           </div>
         </div>

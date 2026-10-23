@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
@@ -205,7 +206,7 @@ async function startServer() {
       embedding_is_real_bge: true,
       embedding_engine: 'BGE-Small Dense Semantic Matcher',
       embedding_warning: null,
-      llm_provider: geminiApiKey ? 'Google Gemini (gemini-2.5-flash)' : 'Local Grounded Synthesizer Engine',
+      llm_provider: geminiApiKey ? `Google Gemini (${process.env.GEMINI_MODEL || 'gemini-3.8-flash'})` : 'Local Grounded Synthesizer Engine',
       llm_is_real_gemini: !!geminiApiKey,
       degraded_reasons: [],
     });
@@ -226,9 +227,9 @@ async function startServer() {
   });
 
   // 4. Documents: Upload & Ingest
-  app.post('/documents/upload', upload.single('file'), async (req, res) => {
+  app.post('/documents/upload', upload.single('file') as any, async (req: express.Request, res: express.Response) => {
     try {
-      const file = req.file;
+      const file = (req as any).file;
       if (!file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
