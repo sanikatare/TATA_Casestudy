@@ -11,44 +11,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { ChatMessage } from '../components/ChatMessage';
-import { getDocuments, queryHLD, getHistory } from '../services/api';
+import { getDocuments, queryHLD, getHistory, getArchitectureModel } from '../services/api';
 import { DocumentItem, QueryRecord } from '../types/autosar';
 import { useDomain, ECU_DOMAINS } from '../context/DomainContext';
-
-const EXTRACTED_EXPLORER_CANDIDATES = {
-  components: [
-    { name: 'PowertrainCoordination_SWC', type: 'Application SW-C', asil: 'ASIL-D', ecu: 'Powertrain DC' },
-    { name: 'Gateway_Router_SWC', type: 'Service Component', asil: 'ASIL-B', ecu: 'Central Gateway' },
-    { name: 'BodyControl_SWC', type: 'Sensor-Actuator SW-C', asil: 'QM', ecu: 'Body Controller' },
-    { name: 'Dem_BSW_Module', type: 'Diagnostic BSW Module', asil: 'ASIL-B', ecu: 'Central Gateway' },
-    { name: 'CanIf_Driver', type: 'Comm Driver', asil: 'ASIL-B', ecu: 'Central Gateway' },
-    { name: 'PduR_Router', type: 'PDU Router', asil: 'ASIL-B', ecu: 'Central Gateway' }
-  ],
-  interfaces: [
-    { name: 'SR_TorqueRequest', kind: 'Sender-Receiver', elements: 'TargetTorque_Nm (uint16), PlausibilityFlag' },
-    { name: 'SR_VehicleSpeed', kind: 'Sender-Receiver', elements: 'VehicleSpeed_kph (float32)' },
-    { name: 'CS_DiagnosticSession', kind: 'Client-Server', elements: 'SetSession(SessionType), Status' },
-    { name: 'SR_BatteryPackState', kind: 'Sender-Receiver', elements: 'StateOfCharge_pct (uint8), PackVoltage_V' }
-  ],
-  ports: [
-    { name: 'Pp_TorqueArbitrated', kind: 'PPort', owner: 'PowertrainCoordination_SWC' },
-    { name: 'R_CAN0_Rx', kind: 'RPort', owner: 'Gateway_Router_SWC' },
-    { name: 'P_VehicleSpeedBroadcast', kind: 'PPort', owner: 'Gateway_Router_SWC' },
-    { name: 'R_BMS_Telemetry', kind: 'RPort', owner: 'PowertrainCoordination_SWC' }
-  ],
-  signals: [
-    { name: 'CAN_FD_TorqueCmd_0x140', bus: 'CAN-FD Ch0', cycle: '10ms' },
-    { name: 'ETH_ADAS_Trajectory_0x400', bus: '100BASE-T1', cycle: '20ms' },
-    { name: 'LIN_DoorMirrorState_0x22', bus: 'LIN Sub 2', cycle: '100ms' },
-    { name: 'CAN_HV_BMS_Alert_0x080', bus: 'CAN-FD Ch1', cycle: '5ms' }
-  ],
-  dependencies: [
-    { from: 'PowertrainCoordination_SWC', to: 'Inverter_Actuator_SWC', via: 'RTE (Zero-Copy)' },
-    { from: 'Gateway_Router_SWC', to: 'DiagnosticEventManager', via: 'BSW Service API' },
-    { from: 'BodyControl_SWC', to: 'Lighting_Actuator_SWC', via: 'LIN Sub-bus' },
-    { from: 'ADAS_Planner_SWC', to: 'PowertrainCoordination_SWC', via: 'Automotive Ethernet' }
-  ]
-};
 
 const SUGGESTED_QUERIES = [
   "Which software components communicate over CAN-FD channel 0?",
@@ -68,8 +33,24 @@ export const HLDAssistantPage: React.FC = () => {
   const [activeExplorerTab, setActiveExplorerTab] = useState<'components' | 'interfaces' | 'ports' | 'signals' | 'dependencies'>('components');
   const [backendError, setBackendError] = useState<string | null>(null);
 
+  // Document-driven explorer state
+  const [explorerData, setExplorerData] = useState<{
+    components: any[];
+    interfaces: any[];
+    ports: any[];
+    signals: any[];
+    dependencies: any[];
+  }>({
+    components: [],
+    interfaces: [],
+    ports: [],
+    signals: [],
+    dependencies: [],
+  });
+
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
+  // 1. Initial Load: Documents & History
   useEffect(() => {
     async function init() {
       setBackendError(null);
@@ -78,27 +59,91 @@ export const HLDAssistantPage: React.FC = () => {
         setDocuments(docs);
 
         const targetId = (location.state as any)?.targetDocId;
-        const initialTarget = docs.find(d => d.id === targetId) || docs[0] || null;
+        const initialTarget = docs.find((d) => d.id === targetId) || docs[0] || null;
         setSelectedDoc(initialTarget);
 
         const history = await getHistory();
         setChatHistory(history);
       } catch (e: any) {
         console.error('Initialization failed', e);
-        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
+        setBackendError(e?.message || 'Cannot connect to backend service');
       }
     }
     init();
   }, [location.state]);
 
+  // 2. Load Real Architecture for Selected Document
+  useEffect(() => {
+    if (!selectedDoc) return;
+
+    async function loadExplorer() {
+      try {
+        const arch = await getArchitectureModel(selectedDoc?.id);
+        const compList = arch.components || [];
+        const ifList = arch.interfaces || [];
+
+        // Build ports from components
+        const portsList: any[] = [];
+        for (const c of compList) {
+          for (const p of c.ports || []) {
+            portsList.push({
+              name: p,
+              kind: p.startsWith('P_') ? 'PPort' : p.startsWith('R_') ? 'RPort' : 'PRPort',
+              owner: c.name,
+            });
+          }
+        }
+
+        // Build signals from bus channels
+        const signalsList: any[] = (arch.bus_matrix || []).map((b) => ({
+          name: `${b.channel_name}_Traffic`,
+          bus: b.channel_name,
+          cycle: b.baud_rate_nominal,
+        }));
+
+        // Build dependencies from interfaces
+        const depList: any[] = ifList
+          .filter((i) => i.consumer_components.length > 0)
+          .map((i) => ({
+            from: i.provider_component,
+            to: i.consumer_components[0],
+            via: i.name,
+          }));
+
+        setExplorerData({
+          components: compList.map((c) => ({
+            name: c.name,
+            type: c.component_type,
+            asil: c.asil_level,
+            ecu: c.ecu_allocation,
+          })),
+          interfaces: ifList.map((i) => ({
+            name: i.name,
+            kind: i.interface_type,
+            elements: i.data_elements.join(' · '),
+          })),
+          ports: portsList,
+          signals: signalsList,
+          dependencies: depList,
+        });
+      } catch (err) {
+        console.warn('Failed to load explorer data for selected document:', err);
+      }
+    }
+
+    loadExplorer();
+  }, [selectedDoc]);
+
+  // Domain filter synchronization
   useEffect(() => {
     if (selectedDomain === 'ALL' || documents.length === 0) return;
-    const domainDef = ECU_DOMAINS.find(d => d.id === selectedDomain);
+    const domainDef = ECU_DOMAINS.find((d) => d.id === selectedDomain);
     if (!domainDef?.match) return;
     const matchStr = domainDef.match.toLowerCase();
-    const matchDoc = documents.find(d =>
-      (d.ecu_domain || '').toLowerCase().includes(matchStr) ||
-      (d.filename || '').toLowerCase().includes(matchStr)
+    const matchDoc = documents.find(
+      (d) =>
+        (d.ecu_domain || '').toLowerCase().includes(matchStr) ||
+        (d.filename || '').toLowerCase().includes(matchStr)
     );
     if (matchDoc && matchDoc.id !== selectedDoc?.id) {
       setSelectedDoc(matchDoc);
@@ -121,23 +166,24 @@ export const HLDAssistantPage: React.FC = () => {
       const record = await queryHLD({
         question: q,
         document_id: selectedDoc?.id,
-        top_k: 5
+        top_k: 5,
       });
+
       setChatHistory((prev) => [record, ...prev]);
     } catch (e: any) {
-      console.error('Query execution failed', e);
-      const errMsg = e?.message || 'Failed to query FastAPI backend';
+      console.error('Query execution error', e);
+      const errMsg = e?.message || 'Unknown network error';
       setBackendError(errMsg);
       const errorRecord: QueryRecord = {
         id: `err-${Date.now()}`,
         question: q,
         answer: `Backend Error: ${errMsg}`,
         document_id: selectedDoc?.id,
-        document_name: selectedDoc?.filename || 'FastAPI Backend',
+        document_name: selectedDoc?.filename || 'HLD Assistant',
         timestamp: new Date().toISOString(),
         status: 'FAILED',
         confidence_score: 0.0,
-        citations: []
+        citations: [],
       };
       setChatHistory((prev) => [errorRecord, ...prev]);
     } finally {
@@ -157,7 +203,7 @@ export const HLDAssistantPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
             <div>
-              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+              <span className="font-bold">Backend Alert:</span> {backendError}
             </div>
           </div>
           <button
@@ -169,7 +215,7 @@ export const HLDAssistantPage: React.FC = () => {
         </div>
       )}
 
-      {/* Top Controls - Blue & White */}
+      {/* Top Controls - Document Selector */}
       <div className="p-4 rounded-xl bg-white border border-blue-100/90 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-blue-600 text-white shadow-xs shadow-blue-500/20">
@@ -181,24 +227,24 @@ export const HLDAssistantPage: React.FC = () => {
             <select
               value={selectedDoc?.id || ''}
               onChange={(e) => {
-                const doc = documents.find(d => d.id === e.target.value);
-                if (doc) setSelectedDoc(doc);
+                const target = documents.find((d) => d.id === e.target.value);
+                if (target) setSelectedDoc(target);
               }}
-              className="bg-blue-50/50 border border-blue-200 text-blue-950 font-bold text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-blue-600 cursor-pointer"
+              className="text-xs font-semibold bg-white border border-blue-200 text-blue-950 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
             >
               {documents.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.filename} ({d.page_count} pages)
+                  {d.filename} ({d.ecu_domain || 'General'})
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-blue-950 font-medium">
-          <span>{selectedDoc?.standard || 'AUTOSAR Classic 4.4'}</span>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="font-semibold text-blue-900">{selectedDoc?.standard || 'AUTOSAR Classic 4.4'}</span>
           <span className="text-blue-200">·</span>
-          <span>{selectedDoc?.chunk_count || 3} Chunks</span>
+          <span>{selectedDoc?.chunk_count || 0} Chunks</span>
 
           {chatHistory.length > 0 && (
             <button
@@ -227,11 +273,11 @@ export const HLDAssistantPage: React.FC = () => {
             {/* Sub-tab Navigation */}
             <div className="flex items-center gap-1 overflow-x-auto">
               {[
-                { id: 'components', label: 'Components' },
-                { id: 'interfaces', label: 'Interfaces' },
-                { id: 'ports', label: 'Ports' },
-                { id: 'signals', label: 'Signals' },
-                { id: 'dependencies', label: 'Flows' },
+                { id: 'components', label: `Components (${explorerData.components.length})` },
+                { id: 'interfaces', label: `Interfaces (${explorerData.interfaces.length})` },
+                { id: 'ports', label: `Ports (${explorerData.ports.length})` },
+                { id: 'signals', label: `Signals (${explorerData.signals.length})` },
+                { id: 'dependencies', label: `Flows (${explorerData.dependencies.length})` },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -252,102 +298,122 @@ export const HLDAssistantPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
             {activeExplorerTab === 'components' && (
               <div className="space-y-2">
-                {EXTRACTED_EXPLORER_CANDIDATES.components.map((c, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleAskQuestion(`What are the interfaces, ports, and safety requirements for ${c.name}?`)}
-                    className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-blue-950 font-bold group-hover:text-blue-600 transition-colors truncate">
-                        {c.name}
-                      </span>
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
-                        {c.asil}
-                      </span>
+                {explorerData.components.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No components extracted from this document.</div>
+                ) : (
+                  explorerData.components.map((c, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleAskQuestion(`What are the interfaces, ports, and safety requirements for ${c.name}?`)}
+                      className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-blue-950 font-bold group-hover:text-blue-600 transition-colors truncate">
+                          {c.name}
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
+                          {c.asil}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">{c.type} · {c.ecu}</div>
                     </div>
-                    <div className="text-xs text-slate-500">{c.type} · {c.ecu}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
             {activeExplorerTab === 'interfaces' && (
               <div className="space-y-2">
-                {EXTRACTED_EXPLORER_CANDIDATES.interfaces.map((iface, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleAskQuestion(`Explain the communication pattern and data elements of ${iface.name}`)}
-                    className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-blue-600 font-bold group-hover:underline truncate">
-                        {iface.name}
-                      </span>
-                      <span className="text-[10px] text-blue-900 font-medium">
-                        {iface.kind}
-                      </span>
+                {explorerData.interfaces.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No interfaces extracted from this document.</div>
+                ) : (
+                  explorerData.interfaces.map((iface, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleAskQuestion(`Explain the communication pattern and data elements of ${iface.name}`)}
+                      className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-blue-600 font-bold group-hover:underline truncate">
+                          {iface.name}
+                        </span>
+                        <span className="text-[10px] text-blue-900 font-medium">
+                          {iface.kind}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">{iface.elements}</div>
                     </div>
-                    <div className="text-xs text-slate-500">{iface.elements}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
             {activeExplorerTab === 'ports' && (
               <div className="space-y-2">
-                {EXTRACTED_EXPLORER_CANDIDATES.ports.map((p, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleAskQuestion(`Which component owns port ${p.name} and how is it connected?`)}
-                    className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-blue-950 font-bold group-hover:text-blue-600 truncate">{p.name}</span>
-                      <span className="text-[10px] text-blue-600 font-bold">
-                        {p.kind}
-                      </span>
+                {explorerData.ports.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No ports extracted from this document.</div>
+                ) : (
+                  explorerData.ports.map((p, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleAskQuestion(`Which component owns port ${p.name} and how is it connected?`)}
+                      className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-blue-950 font-bold group-hover:text-blue-600 truncate">{p.name}</span>
+                        <span className="text-[10px] text-blue-600 font-bold">
+                          {p.kind}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">{p.owner}</div>
                     </div>
-                    <div className="text-xs text-slate-500">{p.owner}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
             {activeExplorerTab === 'signals' && (
               <div className="space-y-2">
-                {EXTRACTED_EXPLORER_CANDIDATES.signals.map((s, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleAskQuestion(`What is the cycle time and bus routing for signal ${s.name}?`)}
-                    className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
-                  >
-                    <div className="text-blue-950 font-bold group-hover:text-blue-600 truncate">{s.name}</div>
-                    <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
-                      <span className="text-blue-700 font-semibold">{s.bus}</span>
-                      <span>{s.cycle}</span>
+                {explorerData.signals.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No bus channels extracted from this document.</div>
+                ) : (
+                  explorerData.signals.map((s, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleAskQuestion(`What is the nominal and data bitrate for ${s.bus}?`)}
+                      className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
+                    >
+                      <div className="text-blue-950 font-bold group-hover:text-blue-600 truncate">{s.name}</div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                        <span className="text-blue-700 font-semibold">{s.bus}</span>
+                        <span>{s.cycle}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
             {activeExplorerTab === 'dependencies' && (
               <div className="space-y-2">
-                {EXTRACTED_EXPLORER_CANDIDATES.dependencies.map((d, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleAskQuestion(`Explain the dependency path from ${d.from} to ${d.to}`)}
-                    className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group space-y-1"
-                  >
-                    <div className="flex items-center justify-between text-blue-950 font-bold">
-                      <span className="truncate">{d.from}</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-blue-400 shrink-0 mx-1" />
-                      <span className="truncate text-blue-600">{d.to}</span>
+                {explorerData.dependencies.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No component dependencies detected.</div>
+                ) : (
+                  explorerData.dependencies.map((d, i) => (
+                    <div
+                      key={i}
+                      onClick={() => handleAskQuestion(`How do ${d.from} and ${d.to} communicate via ${d.via}?`)}
+                      className="p-3 rounded-lg bg-blue-50/40 border border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-1 font-semibold text-blue-950 text-xs">
+                        <span className="truncate">{d.from}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate">{d.to}</span>
+                      </div>
+                      <div className="text-[11px] text-blue-700 font-mono mt-1">{d.via}</div>
                     </div>
-                    <div className="text-xs text-slate-500">{d.via}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -355,93 +421,76 @@ export const HLDAssistantPage: React.FC = () => {
 
         {/* Right Chat Panel */}
         <div className="lg:col-span-8 rounded-xl bg-white border border-blue-100/90 shadow-2xs flex flex-col min-h-0 overflow-hidden">
-          {/* Header */}
-          <div className="p-3.5 px-5 border-b border-blue-50 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.7)] animate-pulse" />
-              <h3 className="text-xs font-bold text-blue-950 uppercase tracking-wider">
-                Architecture Assistant
-              </h3>
-            </div>
-            <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded">Page-Grounded Synthesis</span>
-          </div>
-
-          {/* Quick Suggestions */}
-          <div className="px-5 py-2.5 bg-blue-50/40 border-b border-blue-50 flex items-center gap-2 overflow-x-auto shrink-0">
-            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider shrink-0">
-              Suggestions:
-            </span>
-            {SUGGESTED_QUERIES.map((sq, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleAskQuestion(sq)}
-                className="text-xs px-2.5 py-1 rounded-md bg-white border border-blue-200 text-blue-900 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-colors whitespace-nowrap cursor-pointer font-semibold shadow-2xs"
-              >
-                {sq}
-              </button>
-            ))}
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-blue-50/15">
+          {/* Chat Messages List */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {chatHistory.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-3">
-                <div className="w-11 h-11 rounded-xl bg-blue-600 text-white shadow-xs shadow-blue-500/25 flex items-center justify-center">
-                  <Bot className="w-6 h-6" />
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                <div className="p-3.5 rounded-full bg-blue-50 text-blue-600">
+                  <Bot className="w-8 h-8" />
                 </div>
-                <div className="max-w-sm space-y-1">
-                  <h4 className="text-sm font-bold text-blue-950">
-                    Query Specification
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                    Ask questions about software components, port interfaces, signals, or diagnostic configurations. Every answer cites source pages.
+                <div className="max-w-md space-y-1">
+                  <h3 className="font-bold text-sm text-blue-950">Grounded AUTOSAR Architecture Assistant</h3>
+                  <p className="text-xs text-slate-500">
+                    Ask technical questions regarding SW-C allocations, RTE port contracts, ISO 26262 ASIL decomposition, or bus matrix configurations with verifiable page citations.
                   </p>
+                </div>
+
+                {/* Suggested Queries */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg mt-2 text-left">
+                  {SUGGESTED_QUERIES.map((q, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleAskQuestion(q)}
+                      className="p-2.5 rounded-lg border border-blue-100 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-300 text-xs text-slate-700 transition-all text-left cursor-pointer"
+                    >
+                      {q}
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : (
-              chatHistory.map((item) => (
+              chatHistory.map((msg) => (
                 <ChatMessage
-                  key={item.id}
-                  question={item.question}
-                  answer={item.answer}
-                  timestamp={item.timestamp}
-                  citations={item.citations}
-                  confidenceScore={item.confidence_score}
+                  key={msg.id}
+                  question={msg.question}
+                  answer={msg.answer}
+                  timestamp={msg.timestamp}
+                  citations={msg.citations}
+                  confidenceScore={msg.confidence_score}
                 />
               ))
             )}
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Question Input */}
-          <div className="p-4 border-t border-blue-50 bg-white shrink-0">
+          {/* Chat Input */}
+          <div className="p-4 border-t border-blue-50 bg-white">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleAskQuestion();
               }}
-              className="flex items-center gap-2.5"
+              className="flex items-center gap-3"
             >
               <input
                 type="text"
                 value={questionInput}
                 onChange={(e) => setQuestionInput(e.target.value)}
-                placeholder="Ask about components, interfaces, or bus routing..."
+                placeholder="Ask an AUTOSAR architectural or safety requirement question..."
                 disabled={isSubmitting}
-                className="flex-1 bg-blue-50/30 border border-blue-200 rounded-lg px-3.5 py-2.5 text-xs text-blue-950 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
+                className="flex-1 px-4 py-2.5 rounded-xl border border-blue-200 text-xs bg-slate-50/50 focus:bg-white text-blue-950 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-
               <button
                 type="submit"
                 disabled={isSubmitting || !questionInput.trim()}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs shadow-blue-500/25"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-200 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <span>Send</span>
-                    <Send className="w-3.5 h-3.5 text-white" />
+                    <span>Ask</span>
+                    <Send className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>

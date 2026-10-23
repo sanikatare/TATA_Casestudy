@@ -1,10 +1,10 @@
 import { DocumentItem, QueryRecord, PipelineComponentStatus } from '../types/autosar';
 
-// Support VITE_BACKEND_URL with fallback to http://localhost:8000
+// Support VITE_BACKEND_URL with fallback to relative path (single port full-stack)
 const rawBackendUrl = import.meta.env.VITE_BACKEND_URL;
 export const API_BASE_URL = (rawBackendUrl && rawBackendUrl.trim() !== '')
   ? rawBackendUrl.replace(/\/+$/, '')
-  : 'http://localhost:8000';
+  : '';
 
 /**
  * Format any network or API error into a clear, actionable message.
@@ -12,11 +12,11 @@ export const API_BASE_URL = (rawBackendUrl && rawBackendUrl.trim() !== '')
 export function formatBackendErrorMessage(e: unknown): string {
   if (e instanceof Error) {
     if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('ECONNREFUSED')) {
-      return `Cannot connect to FastAPI backend at ${API_BASE_URL}. Ensure the backend is running with 'uvicorn app.main:app --port 8000'.`;
+      return `Backend communication error: ${e.message}`;
     }
     return e.message;
   }
-  return `An unknown error occurred while communicating with the backend at ${API_BASE_URL}.`;
+  return `An unknown error occurred while communicating with the backend.`;
 }
 
 /**
@@ -299,7 +299,89 @@ export async function getArchitectureCandidates(documentId?: string): Promise<{
 }
 
 /**
- * 10. Run Evaluation Benchmark (POST /evaluate/run)
+ * 10. Get Full Architecture Model (GET /analysis/architecture)
+ */
+export async function getArchitectureModel(documentId?: string): Promise<{
+  document_id: string;
+  document_name: string;
+  extracted_at: string;
+  components: Array<{
+    name: string;
+    component_type: string;
+    asil_level: string;
+    ecu_allocation: string;
+    periodicity: string;
+    ports: string[];
+    description?: string;
+    source_evidence?: { page_number: number; section: string; snippet: string };
+  }>;
+  interfaces: Array<{
+    name: string;
+    interface_type: string;
+    data_elements: string[];
+    provider_component: string;
+    consumer_components: string[];
+    communication_pattern?: string;
+    source_evidence?: { page_number: number; section: string; snippet: string };
+  }>;
+  bus_matrix: Array<{
+    channel_name: string;
+    bus_type: string;
+    baud_rate_nominal: string;
+    baud_rate_data: string;
+    payload_bytes: number;
+    transceiver_termination?: string;
+    mapped_components: string[];
+    source_evidence?: { page_number: number; section: string; snippet: string };
+  }>;
+}> {
+  try {
+    const url = documentId
+      ? `${API_BASE_URL}/analysis/architecture?document_id=${encodeURIComponent(documentId)}`
+      : `${API_BASE_URL}/analysis/architecture`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to load architecture model (${res.status})`);
+    }
+    return await res.json();
+  } catch (err) {
+    throw new Error(formatBackendErrorMessage(err));
+  }
+}
+
+/**
+ * 11. Get Consistency Findings (GET /analysis/consistency)
+ */
+export async function getConsistencyFindings(documentId?: string): Promise<Array<{
+  id: string;
+  rule_id: string;
+  severity: 'HIGH' | 'MEDIUM' | 'INFO';
+  category: string;
+  title: string;
+  description: string;
+  entity_affected: string;
+  source_evidence: { page_number: number; section: string; snippet: string };
+  suggested_action: string;
+  validation_status: 'CONFIRMED' | 'POTENTIAL' | 'UNVERIFIED';
+  review_status?: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EDITED';
+  review_comments?: string;
+}>> {
+  try {
+    const url = documentId
+      ? `${API_BASE_URL}/analysis/consistency?document_id=${encodeURIComponent(documentId)}`
+      : `${API_BASE_URL}/analysis/consistency`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to load consistency findings (${res.status})`);
+    }
+    return await res.json();
+  } catch (err) {
+    throw new Error(formatBackendErrorMessage(err));
+  }
+}
+
+/**
+ * 12. Run Evaluation Benchmark (POST /evaluate/run)
  */
 export async function runEvaluation(): Promise<any> {
   try {
@@ -314,3 +396,4 @@ export async function runEvaluation(): Promise<any> {
     throw new Error(formatBackendErrorMessage(err));
   }
 }
+

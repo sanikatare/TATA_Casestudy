@@ -19,7 +19,7 @@ export const HistoryPage: React.FC = () => {
         setHistoryItems(records);
       } catch (e: any) {
         console.error('Failed to load history', e);
-        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
+        setBackendError(e?.message || 'Cannot connect to backend service');
       }
     }
     load();
@@ -38,7 +38,7 @@ export const HistoryPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
             <div>
-              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+              <span className="font-bold">Backend Alert:</span> {backendError}
             </div>
           </div>
           <button

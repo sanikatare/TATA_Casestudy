@@ -27,7 +27,7 @@ export const DocumentsPage: React.FC = () => {
         setDocuments(list);
       } catch (e: any) {
         console.error('Document load error', e);
-        setBackendError(e?.message || 'Cannot connect to FastAPI backend');
+        setBackendError(e?.message || 'Cannot connect to backend service');
       } finally {
         setLoading(false);
       }

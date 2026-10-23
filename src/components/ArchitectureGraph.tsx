@@ -8,7 +8,23 @@ interface ArchitectureGraphProps {
 }
 
 export const ArchitectureGraph: React.FC<ArchitectureGraphProps> = ({ components, interfaces }) => {
-  const [selectedComponent, setSelectedComponent] = useState<SoftwareComponent>(components[0]);
+  const [selectedCompName, setSelectedCompName] = useState<string | null>(null);
+
+  if (!components || components.length === 0) {
+    return (
+      <div className="p-8 rounded-xl bg-white border border-blue-100 text-center space-y-3">
+        <div className="p-3 bg-blue-50 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center mx-auto">
+          <Layers className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-bold text-blue-950">No Software Components Extracted</h3>
+        <p className="text-xs text-slate-500 max-w-md mx-auto">
+          This document does not declare any explicit AUTOSAR Software Components (_SWC) or BSW modules. Upload a specification with component definitions to visualize topology.
+        </p>
+      </div>
+    );
+  }
+
+  const selectedComponent = components.find((c) => c.name === selectedCompName) || components[0];
 
   return (
     <div className="space-y-6">
@@ -31,7 +47,7 @@ export const ArchitectureGraph: React.FC<ArchitectureGraphProps> = ({ components
             return (
               <button
                 key={comp.name}
-                onClick={() => setSelectedComponent(comp)}
+                onClick={() => setSelectedCompName(comp.name)}
                 className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'

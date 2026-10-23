@@ -24,11 +24,11 @@ export const SystemStatusPage: React.FC = () => {
       setComponents(res.components);
       setStats(res.stats);
       if (res.stats.uptime.includes('Unavailable')) {
-        setBackendError('FastAPI backend is currently unavailable. Ensure uvicorn is running.');
+        setBackendError('Backend service is currently unavailable.');
       }
     } catch (e: any) {
       console.error('System status query failed', e);
-      setBackendError(e?.message || 'Cannot connect to FastAPI backend');
+      setBackendError(e?.message || 'Cannot connect to backend service');
     } finally {
       setIsRefreshing(false);
     }
@@ -46,7 +46,7 @@ export const SystemStatusPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 text-[#1e40af] shrink-0" />
             <div>
-              <span className="font-bold">FastAPI Connection Alert:</span> {backendError}
+              <span className="font-bold">Backend Alert:</span> {backendError}
             </div>
           </div>
           <button
